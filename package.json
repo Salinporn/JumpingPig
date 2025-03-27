@@ -1,0 +1,16 @@
+{
+    "name": "angry-birds-threejs-game",
+    "version": "1.0.0",
+    "description": "Angry Birds-style game using Three.js",
+    "main": "src/game.js",
+    "scripts": {
+      "start": "vite",
+      "build": "vite build"
+    },
+    "dependencies": {
+      "three": "^0.158.0"
+    },
+    "devDependencies": {
+      "vite": "^5.0.0"
+    }
+  }
