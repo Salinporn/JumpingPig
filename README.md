@@ -1,5 +1,8 @@
 # AngryCat
 
+# Installation
+npm install three
+
 # Command to install dependencies
 npm install
 
