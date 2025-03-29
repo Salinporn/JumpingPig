@@ -121,11 +121,11 @@ let lastJumpTime = 0;
 let highestTime = 0;
 
 // Load highest score from localStorage if available
-if (localStorage.getItem('highestScore')) {
-  highestScore = parseInt(localStorage.getItem('highestScore'));
+if (localStorage.getItem("highestScore")) {
+  highestScore = parseInt(localStorage.getItem("highestScore"));
 }
-if (localStorage.getItem('highestTime')) {
-  highestTime = parseFloat(localStorage.getItem('highestTime'));
+if (localStorage.getItem("highestTime")) {
+  highestTime = parseFloat(localStorage.getItem("highestTime"));
 }
 
 // Camera position
@@ -157,11 +157,11 @@ function animate() {
   if (hasJumped) {
     platformSpawnTimer++;
     elapsedTime = startTime !== null ? (Date.now() - startTime) / 1000 : 0;
-    
+
     // Update score - base on time plus bonus points for height
     const heightScore = Math.max(0, Math.floor(piggy.position.y)) * 2;
     score = Math.floor(elapsedTime) + heightScore;
-    
+
     const dynamicSpawnInterval = 100 * (0.05 / currentPlatformSpeed);
     if (platformSpawnTimer > dynamicSpawnInterval) {
       platformSpawnTimer = 0;
@@ -300,47 +300,86 @@ function animate() {
     // Save high scores if current scores are higher
     if (elapsedTime > highestTime) {
       highestTime = elapsedTime;
-      localStorage.setItem('highestTime', highestTime.toString());
-    }
-    
-    if (score > highestScore) {
-      highestScore = score;
-      localStorage.setItem('highestScore', highestScore.toString());
+      localStorage.setItem("highestTime", highestTime.toString());
     }
 
+    if (score > highestScore) {
+      highestScore = score;
+      localStorage.setItem("highestScore", highestScore.toString());
+    }
+
+    // Game over overlay
     const overlay = document.createElement("div");
     overlay.style.position = "fixed";
     overlay.style.top = "0";
     overlay.style.left = "0";
     overlay.style.width = "100%";
     overlay.style.height = "100%";
-    overlay.style.backgroundColor = "rgba(0, 0, 0, 0.8)";
-    overlay.style.color = "white";
+    overlay.style.backgroundColor = "rgba(0, 0, 0, 0.85)";
+    overlay.style.color = "#fff";
     overlay.style.display = "flex";
     overlay.style.flexDirection = "column";
     overlay.style.justifyContent = "center";
     overlay.style.alignItems = "center";
-    overlay.style.fontSize = "2rem";
+    overlay.style.fontSize = "24px";
     overlay.style.zIndex = "1000";
+    overlay.style.fontFamily = "Arial, sans-serif";
+    overlay.style.textAlign = "center";
 
+    // Game over image
+    const image = document.createElement("img");
+    image.src = "assets/images/gameover.png";
+    image.alt = "Game Over";
+    image.style.width = "400px";
+    image.style.marginBottom = "30px";
+    overlay.appendChild(image);
+
+    // Game over message container
     const message = document.createElement("div");
-    message.style.textAlign = "center";
+    message.style.textAlign = "left";
     message.style.width = "100%";
+    message.style.maxWidth = "400px";
     message.innerHTML = `
-      Game Over!<br>
-      Score: ${score} points<br>
-      Time Survived: ${elapsedTime.toFixed(2)} seconds<br>
-      Highest Score: ${highestScore} points<br>
-      Best Time: ${highestTime.toFixed(2)} seconds
+
+      <div style="display: flex; flex-direction: column; gap: 10px; font-size: 1.2rem;">
+        <div style="display: flex; justify-content: space-between;">
+          <span>Score:</span> <span style="font-weight: bold;">${score}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between;">
+          <span>Time Survived:</span> <span style="font-weight: bold;">${elapsedTime.toFixed(2)} s</span>
+        </div>
+        <hr style="border: 0; height: 1px; background: #ccc; margin: 10px 0;">
+        <div style="display: flex; justify-content: space-between;">
+          <span>Highest Score:</span> <span style="font-weight: bold;">${highestScore}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between;">
+          <span>Best Time:</span> <span style="font-weight: bold;">${highestTime.toFixed(2)} s</span>
+        </div>
+      </div>
     `;
+
     overlay.appendChild(message);
 
+
+    // Restart button
     const restartButton = document.createElement("button");
     restartButton.textContent = "Restart";
     restartButton.style.marginTop = "20px";
-    restartButton.style.padding = "10px 20px";
+    restartButton.style.padding = "12px 24px";
     restartButton.style.fontSize = "1rem";
     restartButton.style.cursor = "pointer";
+    restartButton.style.backgroundColor = "#ea3d8c";
+    restartButton.style.color = "#fff";
+    restartButton.style.border = "none";
+    restartButton.style.borderRadius = "8px";
+    restartButton.style.boxShadow = "0 5px 15px rgba(234, 61, 140, 0.3)";
+    restartButton.style.transition = "all 0.3s ease";
+    restartButton.addEventListener("mouseover", () => {
+      restartButton.style.backgroundColor = "#f07ab3";
+    });
+    restartButton.addEventListener("mouseout", () => {
+      restartButton.style.backgroundColor = "#ea3d8c";
+    });
     restartButton.addEventListener("click", () => {
       document.body.removeChild(overlay);
       restartGame();
@@ -351,7 +390,9 @@ function animate() {
   }
 
   // Update HUD with separate elements
-  document.getElementById("time").textContent = `Time: ${elapsedTime.toFixed(2)}`;
+  document.getElementById("time").textContent = `Time: ${elapsedTime.toFixed(
+    2
+  )}`;
   document.getElementById("score").textContent = `Score: ${score}`;
   document.getElementById("best").textContent = `Best: ${highestScore}`;
 
