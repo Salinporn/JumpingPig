@@ -70,7 +70,7 @@ let piggyHalfWidth = 0.5;
 
 const objLoader = new OBJLoader();
 objLoader.load(
-  "asset/piggy.obj",
+  "assets/models/piggy.obj",
   (object) => {
     piggy = object;
     let firstMesh = null;
@@ -79,7 +79,7 @@ objLoader.load(
       if (child.isMesh) {
         firstMesh = child;
         child.material = new THREE.MeshStandardMaterial({
-          color: 0xffc7fa,
+          color: 0xf4a1c8,
           side: THREE.DoubleSide,
         });
         child.castShadow = true;
@@ -107,6 +107,7 @@ objLoader.load(
 let velocity = new THREE.Vector3(0, 0, 0);
 const gravity = new THREE.Vector3(0, -0.02, 0);
 let score = 0;
+let highestScore = 0;
 let elapsedTime = 0;
 let gameOver = false;
 let startTime = null;
@@ -118,6 +119,14 @@ const MIN_JUMP_COOLDOWN = 300;
 const MAX_PLATFORM_SPEED = 0.115;
 let lastJumpTime = 0;
 let highestTime = 0;
+
+// Load highest score from localStorage if available
+if (localStorage.getItem('highestScore')) {
+  highestScore = parseInt(localStorage.getItem('highestScore'));
+}
+if (localStorage.getItem('highestTime')) {
+  highestTime = parseFloat(localStorage.getItem('highestTime'));
+}
 
 // Camera position
 camera.position.z = 20;
@@ -148,7 +157,11 @@ function animate() {
   if (hasJumped) {
     platformSpawnTimer++;
     elapsedTime = startTime !== null ? (Date.now() - startTime) / 1000 : 0;
-    score = Math.floor(elapsedTime);
+    
+    // Update score - base on time plus bonus points for height
+    const heightScore = Math.max(0, Math.floor(piggy.position.y)) * 2;
+    score = Math.floor(elapsedTime) + heightScore;
+    
     const dynamicSpawnInterval = 100 * (0.05 / currentPlatformSpeed);
     if (platformSpawnTimer > dynamicSpawnInterval) {
       platformSpawnTimer = 0;
@@ -284,6 +297,17 @@ function animate() {
   if (piggy.position.y < -window.innerHeight / 20) {
     gameOver = true;
 
+    // Save high scores if current scores are higher
+    if (elapsedTime > highestTime) {
+      highestTime = elapsedTime;
+      localStorage.setItem('highestTime', highestTime.toString());
+    }
+    
+    if (score > highestScore) {
+      highestScore = score;
+      localStorage.setItem('highestScore', highestScore.toString());
+    }
+
     const overlay = document.createElement("div");
     overlay.style.position = "fixed";
     overlay.style.top = "0";
@@ -300,14 +324,15 @@ function animate() {
     overlay.style.zIndex = "1000";
 
     const message = document.createElement("div");
-    if (elapsedTime > highestTime) {
-      highestTime = elapsedTime;
-    }
     message.style.textAlign = "center";
     message.style.width = "100%";
-    message.innerHTML = `Game Over!<br>Time Survived: ${elapsedTime.toFixed(
-      2
-    )} seconds<br>Highest Time: ${highestTime.toFixed(2)} seconds`;
+    message.innerHTML = `
+      Game Over!<br>
+      Score: ${score} points<br>
+      Time Survived: ${elapsedTime.toFixed(2)} seconds<br>
+      Highest Score: ${highestScore} points<br>
+      Best Time: ${highestTime.toFixed(2)} seconds
+    `;
     overlay.appendChild(message);
 
     const restartButton = document.createElement("button");
@@ -325,9 +350,10 @@ function animate() {
     document.body.appendChild(overlay);
   }
 
-  document.getElementById("time").textContent = `Time: ${elapsedTime.toFixed(
-    2
-  )}`;
+  // Update HUD with separate elements
+  document.getElementById("time").textContent = `Time: ${elapsedTime.toFixed(2)}`;
+  document.getElementById("score").textContent = `Score: ${score}`;
+  document.getElementById("best").textContent = `Best: ${highestScore}`;
 
   renderer.render(scene, camera);
 }
