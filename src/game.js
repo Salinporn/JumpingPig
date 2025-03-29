@@ -45,7 +45,7 @@ const initialPlatformPositions = [
 initialPlatformPositions.forEach((pos) => {
   const platform = new THREE.Mesh(platformGeometry, platformMaterial);
   platform.position.set(pos.x, pos.y, 0);
-  platform.isMoving = false; // Initial platforms are static
+  platform.isMoving = false;
   scene.add(platform);
   platforms.push(platform);
   initialPlatforms.push(platform);
@@ -97,7 +97,7 @@ const gravity = new THREE.Vector3(0, -0.02, 0);
 let score = 0;
 let elapsedTime = 0;
 let gameOver = false;
-let startTime;
+let startTime = null;
 const piggyMoveSpeed = 0.1;
 const jumpForce = 0.4;
 let hasJumped = false;
@@ -136,7 +136,7 @@ function animate() {
   // Platform spawning
   if (hasJumped) {
     platformSpawnTimer++;
-    elapsedTime = (Date.now() - startTime) / 1000;
+    elapsedTime = startTime !== null ? (Date.now() - startTime) / 1000 : 0;
     score = Math.floor(elapsedTime);
     const dynamicSpawnInterval = 100 * (0.05 / currentPlatformSpeed);
     if (platformSpawnTimer > dynamicSpawnInterval) {
@@ -167,7 +167,6 @@ function animate() {
       platforms[i].position.y -= currentPlatformSpeed;
     }
 
-    // Collision detection
     const platformHalfHeight = platformGeometry.parameters.height / 2;
     const platformHalfWidth = platformGeometry.parameters.width / 2;
 
@@ -195,20 +194,19 @@ function animate() {
       platforms.splice(i, 1);
     }
 
+    // Move platforms if they are moving
     if (elapsedTime >= 10) {
-      // Inside the platforms.forEach loop
       platforms.forEach((platform) => {
         if (platform.isMoving) {
           const nextX =
             platform.position.x + platform.direction * platform.speed;
 
-          // Check if platform exceeds movement range
           if (
             nextX > platform.initialX + platform.movingRange ||
             nextX < platform.initialX - platform.movingRange
           ) {
-            platform.direction *= -1; // Reverse direction
-            platform.position.x += platform.direction * platform.speed; // Move within bounds
+            platform.direction *= -1;
+            platform.position.x += platform.direction * platform.speed; 
           } else {
             platform.position.x = nextX;
           }
@@ -227,6 +225,9 @@ function animate() {
     isGrounded &&
     currentTime - lastJumpTime >= dynamicJumpCooldown
   ) {
+    if (startTime === null) {
+      startTime = currentTime; // Set startTime at first jump
+    }
     velocity.y = jumpForce;
     isGrounded = false;
     hasJumped = true;
@@ -292,7 +293,7 @@ function restartGame() {
   currentPlatformSpeed = 0.05;
   piggy.position.set(0, -1.25, 0);
   velocity.set(0, 0, 0);
-  startTime = Date.now();
+  startTime = null;
   hasJumped = false;
   isGrounded = true;
   lastJumpTime = 0;
@@ -327,7 +328,7 @@ function startGame() {
   currentPlatformSpeed = 0.05;
   piggy.position.set(0, -1.25, 0);
   velocity.set(0, 0, 0);
-  startTime = Date.now();
+  startTime = null;
   hasJumped = false;
   isGrounded = true;
   lastJumpTime = 0;
