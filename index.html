@@ -1,18 +1,32 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Angry Birds Three.js Game</title>
+    <title>Gravity Flip Game</title>
     <style>
-        body { 
-            margin: 0; 
-            overflow: hidden; 
-            font-family: Arial, sans-serif; 
+        body { margin: 0; overflow: hidden; }
+        #info {
+            position: absolute;
+            top: 10px;
+            width: 100%;
+            text-align: center;
+            color: white;
+            font-family: Arial, sans-serif;
+            pointer-events: none;
+            text-shadow: 1px 1px 1px black;
+        }
+        #time {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-family: Arial, sans-serif;
+            pointer-events: none;
+            text-shadow: 1px 1px 1px black;
         }
     </style>
 </head>
 <body>
-    <script type="module" src="/src/game.js"></script>
+    <div id="time">Time: 0:00</div>
+    <script type="module" src="src/game.js"></script>
 </body>
 </html>

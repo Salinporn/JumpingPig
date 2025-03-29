@@ -1,285 +1,323 @@
-import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.min.js";
-// import { GLTFLoader } from "https://cdn.jsdelivr.net/npm/three/examples/jsm/loaders/GLTFLoader.js";
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.119/build/three.module.js";
+import { OBJLoader } from "https://cdn.jsdelivr.net/npm/three@0.119/examples/jsm/loaders/OBJLoader.js";
 
+// Scene setup
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(
+  75,
+  window.innerWidth / window.innerHeight,
+  0.1,
+  1000
+);
+const renderer = new THREE.WebGLRenderer();
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
 
-class AngryCatsGame {
-  constructor() {
-    // Scene setup
-    this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera(
-      75,
-      window.innerWidth / window.innerHeight,
-      0.1,
-      1000
-    );
-    this.renderer = new THREE.WebGLRenderer({ antialias: true });
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
-    document.body.appendChild(this.renderer.domElement);
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+scene.add(ambientLight);
+const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+directionalLight.position.set(0, 5, 10);
+scene.add(directionalLight);
 
-    // Game state management
-    this.gameStage = "INITIAL_POSITION";
-    this.objects = [];
-    this.gravity = new THREE.Vector3(0, -9.8, 0);
+// Geometry and materials
+const platformGeometry = new THREE.BoxGeometry(5, 0.5, 1);
+const platformMaterial = new THREE.MeshBasicMaterial({ color: 0x808080 });
 
-    // Cat and launch parameters
-    this.launchAngleHorizontal = 0;
-    this.launchAngleVertical = 0;
-    this.launchPower = 15;
+let platforms = [];
+const initialPlatforms = [];
+let currentPlatformSpeed = 0.05;
+let platformSpawnTimer = 0;
 
-    // Aiming line
-    this.aimLine = null;
+// Initial platforms
+const initialPlatformPositions = [
+  { x: 0, y: -2 },
+  { x: -4, y: 2 },
+  { x: 4, y: 2 },
+  { x: 0, y: 6 },
+  { x: -2, y: 10 },
+  { x: 2, y: 10 },
+  { x: -3, y: 14 },
+  { x: 3, y: 14 },
+  { x: -1, y: 19 },
+  { x: 1, y: 19 },
+];
 
-    // Setup game elements
-    this.setupScene();
-    this.setupEventListeners();
+initialPlatformPositions.forEach((pos) => {
+  const platform = new THREE.Mesh(platformGeometry, platformMaterial);
+  platform.position.set(pos.x, pos.y, 0);
+  scene.add(platform);
+  platforms.push(platform);
+  initialPlatforms.push(platform);
+});
 
-    // Add UI overlay
-    this.addUIOverlay();
+// Piggy variables
+let piggy = null;
+let piggyHalfHeight = 0.5;
+let piggyHalfWidth = 0.5;
 
-    // Start animation
-    this.animate();
-  }
+const objLoader = new OBJLoader();
+objLoader.load(
+  "asset/piggy.obj",
+  (object) => {
+    piggy = object;
+    let firstMesh = null;
 
-  setupScene() {
-    // Scene background
-    this.scene.background = new THREE.Color(0x87ceeb);
-
-    // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    directionalLight.position.set(5, 10, 7);
-    this.scene.add(ambientLight, directionalLight);
-
-    // Ground
-    const groundGeometry = new THREE.PlaneGeometry(50, 50);
-    const groundMaterial = new THREE.MeshStandardMaterial({ color: 0x8bc34a });
-    const ground = new THREE.Mesh(groundGeometry, groundMaterial);
-    ground.rotation.x = -Math.PI / 2;
-    ground.position.y = -2;
-    this.scene.add(ground);
-
-    // Cat
-    const catGeometry = new THREE.SphereGeometry(0.5, 32, 32);
-    const catMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
-    this.cat = new THREE.Mesh(catGeometry, catMaterial);
-    this.cat.position.set(-10, 2, 0);
-    this.scene.add(this.cat);
-
-    // Blocks
-    this.createBlockStructure();
-
-    // Initial camera position
-    this.positionCameraForInitialAim();
-  }
-
-  addUIOverlay() {
-    this.uiOverlay = document.createElement("div");
-    this.uiOverlay.style.position = "absolute";
-    this.uiOverlay.style.top = "10px";
-    this.uiOverlay.style.left = "10px";
-    this.uiOverlay.style.color = "white";
-    this.uiOverlay.style.background = "rgba(0,0,0,0.5)";
-    this.uiOverlay.style.padding = "10px";
-    this.uiOverlay.style.borderRadius = "5px";
-    this.uiOverlay.textContent = "Adjust Horizontal Angle (Left/Right)";
-    document.body.appendChild(this.uiOverlay);
-  }
-
-  updateUIOverlay() {
-    if (!this.uiOverlay) return;
-    switch (this.gameStage) {
-      case "VERTICAL_AIM":
-        this.uiOverlay.textContent = "Adjust Vertical Angle (Up/Down)";
-        break;
-      case "LAUNCHED":
-        this.uiOverlay.textContent = "Cat Launched!";
-        break;
-    }
-  }
-
-  createBlockStructure() {
-    const blockColors = [0xff5722, 0x795548, 0x9c27b0];
-
-    for (let i = 0; i < 3; i++) {
-      for (let j = 0; j < 3; j++) {
-        const blockGeometry = new THREE.BoxGeometry(1, 1, 1);
-        const blockMaterial = new THREE.MeshStandardMaterial({
-          color: blockColors[Math.floor(Math.random() * blockColors.length)],
+    object.traverse((child) => {
+      if (child.isMesh) {
+        firstMesh = child;
+        child.material = new THREE.MeshStandardMaterial({
+          color: 0xffc7fa,
+          side: THREE.DoubleSide,
         });
-        const block = new THREE.Mesh(blockGeometry, blockMaterial);
-
-        block.position.set(10 + j * 1.5, -1 + i * 1.5, 0);
-        this.scene.add(block);
-        this.objects.push(block);
+        child.castShadow = true;
+        child.receiveShadow = true;
       }
-    }
-  }
-
-  calculateLaunchVector() {
-    const horizontalRad = this.launchAngleHorizontal;
-    const verticalRad = this.launchAngleVertical;
-
-    const directionX = Math.cos(verticalRad) * Math.cos(horizontalRad);
-    const directionY = Math.sin(verticalRad);
-    const directionZ = Math.cos(verticalRad) * Math.sin(horizontalRad);
-
-    return new THREE.Vector3(
-      directionX * this.launchPower,
-      directionY * this.launchPower,
-      directionZ * this.launchPower
-    );
-  }
-
-  createAimLine() {
-    // Remove existing aim line if it exists
-    if (this.aimLine) {
-      this.scene.remove(this.aimLine);
-    }
-
-    // Calculate launch vector for visualization
-    const launchVector = this.calculateLaunchVector();
-
-    // Create a line geometry to show trajectory
-    const points = [];
-    const numPoints = 20;
-    const gravity = this.gravity.y;
-
-    for (let i = 0; i < numPoints; i++) {
-      const t = i * 0.1;
-      const x = this.cat.position.x + launchVector.x * t;
-      const y = this.cat.position.y + launchVector.y * t + 0.5 * gravity * t * t;
-      const z = this.cat.position.z + launchVector.z * t;
-      points.push(new THREE.Vector3(x, y, z));
-    }
-
-    const lineGeometry = new THREE.BufferGeometry().setFromPoints(points);
-    const lineMaterial = new THREE.LineBasicMaterial({
-      color: 0xffffff,
-      linewidth: 2,
     });
-    this.aimLine = new THREE.Line(lineGeometry, lineMaterial);
-    this.scene.add(this.aimLine);
-  }
 
-  positionCameraForInitialAim() {
-    this.camera.position.set(
-      this.cat.position.x - 5,
-      this.cat.position.y + 3,
-      this.cat.position.z
-    );
-    this.camera.lookAt(10, 2, 0);
-
-    this.gameStage = "INITIAL_POSITION";
-    this.updateUIOverlay();
-  }
-
-  positionCameraForVerticalAim() {
-    this.camera.position.set(
-      this.cat.position.x + 15,
-      this.cat.position.y + 3,
-      this.cat.position.z + 20
-    );
-
-    this.camera.lookAt(5, 2, -10);
-
-    this.gameStage = "VERTICAL_AIM";
-    this.updateUIOverlay();
-  }
-
-  setupEventListeners() {
-    this.renderer.domElement.addEventListener(
-      "click",
-      this.handleClick.bind(this),
-      false
-    );
-    window.addEventListener(
-      "mousemove",
-      this.handleMouseMove.bind(this),
-      false
-    );
-    window.addEventListener("resize", this.onWindowResize.bind(this), false);
-  }
-
-  handleClick(event) {
-    switch (this.gameStage) {
-      case "INITIAL_POSITION":
-        this.positionCameraForVerticalAim();
-        break;
-      case "VERTICAL_AIM":
-        this.launchCat();
-        break;
+    if (firstMesh) {
+      firstMesh.geometry.computeBoundingBox();
+      const bb = firstMesh.geometry.boundingBox;
+      piggyHalfHeight = (bb.max.y - bb.min.y) / 2;
+      piggyHalfWidth = (bb.max.x - bb.min.x) / 2;
     }
-  }
 
-  handleMouseMove(event) {
-    if (!this.gameStage) return;
+    piggy.position.set(0, 0, 0);
+    piggy.scale.set(1.5, 1.5, 1.5);
+    scene.add(piggy);
+    startGame();
+  },
+  undefined,
+  (err) => console.error(err)
+);
 
-    const mouseX = (event.clientX / window.innerWidth) * 2 - 1;
-    const mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
+// Game variables
+let velocity = new THREE.Vector3(0, 0, 0);
+const gravity = new THREE.Vector3(0, -0.02, 0);
+let score = 0;
+let elapsedTime = 0;
+let gameOver = false;
+let startTime;
+const piggyMoveSpeed = 0.1;
+const jumpForce = 0.4;
+let hasJumped = false;
+let isGrounded = true;
+let dynamicJumpCooldown = 500;
+const MIN_JUMP_COOLDOWN = 300;
+const MAX_PLATFORM_SPEED = 0.115;
+let lastJumpTime = 0;
+let highestTime = 0;
 
-    switch (this.gameStage) {
-      case "INITIAL_POSITION":
-        this.launchAngleHorizontal = (mouseX * Math.PI) / 4;
-        this.createAimLine();
-        break;
-      case "VERTICAL_AIM":
-        this.launchAngleVertical = (mouseY * Math.PI) / 4;
-        this.createAimLine();
-        break;
+// Camera position
+camera.position.z = 25;
+
+// Keyboard input
+const keys = {};
+window.addEventListener("keydown", (event) => {
+  keys[event.key] = true;
+});
+window.addEventListener("keyup", (event) => {
+  keys[event.key] = false;
+});
+
+// Animation loop
+function animate() {
+  if (gameOver || !piggy) return;
+
+  requestAnimationFrame(animate);
+
+  velocity.add(gravity);
+  piggy.position.add(velocity);
+
+  // Update platform speed
+  currentPlatformSpeed = Math.min(0.05 + score * 0.003, MAX_PLATFORM_SPEED);
+  dynamicJumpCooldown = Math.max(500 - score * 15, MIN_JUMP_COOLDOWN);
+
+  // Platform spawning
+  if (hasJumped) {
+    platformSpawnTimer++;
+    const dynamicSpawnInterval = 100 * (0.05 / currentPlatformSpeed);
+    if (platformSpawnTimer > dynamicSpawnInterval) {
+      platformSpawnTimer = 0;
+      const newPlatform = new THREE.Mesh(platformGeometry, platformMaterial);
+      newPlatform.position.y = 20;
+      newPlatform.position.x = (Math.random() - 0.5) * 8;
+      platforms.push(newPlatform);
+      scene.add(newPlatform);
     }
+    elapsedTime = (Date.now() - startTime) / 1000;
+    score = Math.floor(elapsedTime);
   }
 
-  launchCat() {
-    // Use the combined launch vector
-    this.cat.velocity = this.calculateLaunchVector();
-    this.gameStage = "LAUNCHED";
-    this.updateUIOverlay();
+  isGrounded = false;
 
-    // Remove aim line when cat is launched
-    if (this.aimLine) {
-      this.scene.remove(this.aimLine);
-      this.aimLine = null;
+  // Platform movement and collision
+  for (let i = platforms.length - 1; i >= 0; i--) {
+    if (hasJumped) {
+      platforms[i].position.y -= currentPlatformSpeed;
     }
-  }
 
-  updatePhysics(deltaTime) {
-    if (this.cat.velocity) {
-      this.cat.velocity.add(this.gravity.clone().multiplyScalar(deltaTime));
-      this.cat.position.add(
-        this.cat.velocity.clone().multiplyScalar(deltaTime)
-      );
+    // Collision detection
+    const platformHalfHeight = platformGeometry.parameters.height / 2;
+    const platformHalfWidth = platformGeometry.parameters.width / 2;
 
-      // Ground collision
-      if (this.cat.position.y < -2) {
-        this.cat.velocity.set(0, 0, 0);
+    if (
+      piggy.position.y - piggyHalfHeight <=
+        platforms[i].position.y + platformHalfHeight &&
+      piggy.position.y + piggyHalfHeight >=
+        platforms[i].position.y - platformHalfHeight &&
+      piggy.position.x + piggyHalfWidth >
+        platforms[i].position.x - platformHalfWidth &&
+      piggy.position.x - piggyHalfWidth <
+        platforms[i].position.x + platformHalfWidth
+    ) {
+      if (velocity.y < 0) {
+        piggy.position.y =
+          platforms[i].position.y + platformHalfHeight + piggyHalfHeight;
+        velocity.y = 0;
+        isGrounded = true;
       }
+    }
 
-      // Block collision
-      this.objects.forEach((block) => {
-        const distance = this.cat.position.distanceTo(block.position);
-        if (distance < 1) {
-          this.scene.remove(block);
-          this.objects = this.objects.filter((obj) => obj !== block);
-        }
-      });
+    // Remove off-screen platforms
+    if (platforms[i].position.y < -20) {
+      scene.remove(platforms[i]);
+      platforms.splice(i, 1);
     }
   }
 
-  onWindowResize() {
-    this.camera.aspect = window.innerWidth / window.innerHeight;
-    this.camera.updateProjectionMatrix();
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
+  // Piggy movement
+  if (keys["a"] || keys["ArrowLeft"]) piggy.position.x -= piggyMoveSpeed;
+  if (keys["d"] || keys["ArrowRight"]) piggy.position.x += piggyMoveSpeed;
+
+  const currentTime = Date.now();
+  if (
+    (keys["w"] || keys["ArrowUp"] || keys[" "]) &&
+    isGrounded &&
+    currentTime - lastJumpTime >= dynamicJumpCooldown
+  ) {
+    velocity.y = jumpForce;
+    isGrounded = false;
+    hasJumped = true;
+    lastJumpTime = currentTime;
   }
 
-  animate() {
-    requestAnimationFrame(this.animate.bind(this));
+  // Game over check
+  if (piggy.position.y < -window.innerHeight / 20) {
+    gameOver = true;
 
-    const deltaTime = 0.016;
-    this.updatePhysics(deltaTime);
+    const overlay = document.createElement("div");
+    overlay.style.position = "fixed";
+    overlay.style.top = "0";
+    overlay.style.left = "0";
+    overlay.style.width = "100%";
+    overlay.style.height = "100%";
+    overlay.style.backgroundColor = "rgba(0, 0, 0, 0.8)";
+    overlay.style.color = "white";
+    overlay.style.display = "flex";
+    overlay.style.flexDirection = "column";
+    overlay.style.justifyContent = "center";
+    overlay.style.alignItems = "center";
+    overlay.style.fontSize = "2rem";
+    overlay.style.zIndex = "1000";
 
-    this.renderer.render(this.scene, this.camera);
+    const message = document.createElement("div");
+    if (elapsedTime > highestTime) {
+      highestTime = elapsedTime;
+    }
+    message.style.textAlign = "center";
+    message.style.width = "100%";
+    message.innerHTML = `Game Over!<br>Time Survived: ${elapsedTime.toFixed(
+      2
+    )} seconds<br>Highest Time: ${highestTime.toFixed(2)} seconds`;
+    overlay.appendChild(message);
+
+    const restartButton = document.createElement("button");
+    restartButton.textContent = "Restart";
+    restartButton.style.marginTop = "20px";
+    restartButton.style.padding = "10px 20px";
+    restartButton.style.fontSize = "1rem";
+    restartButton.style.cursor = "pointer";
+    restartButton.addEventListener("click", () => {
+      document.body.removeChild(overlay);
+      restartGame();
+    });
+    overlay.appendChild(restartButton);
+
+    document.body.appendChild(overlay);
   }
+
+  document.getElementById("time").textContent = `Time: ${elapsedTime.toFixed(
+    2
+  )}`;
+
+  renderer.render(scene, camera);
 }
 
-// Initialize the game
-const game = new AngryCatsGame();
+// Restart game
+function restartGame() {
+  gameOver = false;
+  score = 0;
+  currentPlatformSpeed = 0.05;
+  piggy.position.set(0, -1.25, 0);
+  velocity.set(0, 0, 0);
+  startTime = Date.now();
+  hasJumped = false;
+  isGrounded = true;
+  lastJumpTime = 0;
+  elapsedTime = 0;
+
+  platforms.forEach((platform) => {
+    if (!initialPlatforms.includes(platform)) {
+      scene.remove(platform);
+    }
+  });
+  platforms = [...initialPlatforms];
+
+  initialPlatforms.forEach((platform, index) => {
+    if (!scene.children.includes(platform)) {
+      scene.add(platform);
+    }
+    platform.position.set(
+      initialPlatformPositions[index].x,
+      initialPlatformPositions[index].y,
+      0
+    );
+  });
+
+  animate();
+}
+
+// Start game
+function startGame() {
+  gameOver = false;
+  score = 0;
+  currentPlatformSpeed = 0.05;
+  piggy.position.set(0, -1.25, 0);
+  velocity.set(0, 0, 0);
+  startTime = Date.now();
+  hasJumped = false;
+  isGrounded = true;
+  lastJumpTime = 0;
+
+  // Clear non-initial platforms
+  platforms.forEach((platform) => {
+    if (!initialPlatforms.includes(platform)) {
+      scene.remove(platform);
+    }
+  });
+  platforms = [...initialPlatforms];
+
+  // Reset initial platforms positions
+  initialPlatformPositions.forEach((pos, index) => {
+    initialPlatforms[index].position.set(pos.x, pos.y, 0);
+  });
+
+  animate();
+}
+
+// Resize handler
+window.addEventListener("resize", () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
