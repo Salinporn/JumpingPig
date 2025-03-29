@@ -51,6 +51,18 @@ initialPlatformPositions.forEach((pos) => {
   initialPlatforms.push(platform);
 });
 
+const powerUpGeometry = new THREE.SphereGeometry(0.3);
+const powerUpMaterial = new THREE.MeshStandardMaterial({
+  color: 0x00ff00,
+  emissive: 0x00ff00,
+  emissiveIntensity: 0.5,
+});
+let powerUps = [];
+const JUMP_FORCE_NORMAL = 0.4;
+const JUMP_FORCE_SUPER = 0.6;
+let jumpForce = JUMP_FORCE_NORMAL;
+let superJumpTimeout = null;
+
 // Piggy variables
 let piggy = null;
 let piggyHalfHeight = 0.5;
@@ -99,7 +111,6 @@ let elapsedTime = 0;
 let gameOver = false;
 let startTime = null;
 const piggyMoveSpeed = 0.1;
-const jumpForce = 0.4;
 let hasJumped = false;
 let isGrounded = true;
 let dynamicJumpCooldown = 500;
@@ -109,7 +120,7 @@ let lastJumpTime = 0;
 let highestTime = 0;
 
 // Camera position
-camera.position.z = 25;
+camera.position.z = 20;
 
 // Keyboard input
 const keys = {};
@@ -152,6 +163,17 @@ function animate() {
         newPlatform.speed = 0.01;
         newPlatform.initialX = newPlatform.position.x;
         newPlatform.movingRange = 10;
+      }
+
+      if (!newPlatform.isMoving && Math.random() < 0.03) {
+        const powerUp = new THREE.Mesh(powerUpGeometry, powerUpMaterial);
+        powerUp.position.set(
+          newPlatform.position.x,
+          newPlatform.position.y + 0.5,
+          0
+        );
+        scene.add(powerUp);
+        powerUps.push(powerUp);
       }
 
       platforms.push(newPlatform);
@@ -206,12 +228,36 @@ function animate() {
             nextX < platform.initialX - platform.movingRange
           ) {
             platform.direction *= -1;
-            platform.position.x += platform.direction * platform.speed; 
+            platform.position.x += platform.direction * platform.speed;
           } else {
             platform.position.x = nextX;
           }
         }
       });
+    }
+  }
+
+  for (let i = powerUps.length - 1; i >= 0; i--) {
+    const powerUp = powerUps[i];
+    powerUp.position.y -= currentPlatformSpeed;
+    powerUp.rotation.x += 0.01;
+    powerUp.rotation.y += 0.01;
+
+    // Remove off-screen power-ups
+    if (powerUp.position.y < -20) {
+      scene.remove(powerUp);
+      powerUps.splice(i, 1);
+      continue;
+    }
+
+    // Collision detection
+    const dx = piggy.position.x - powerUp.position.x;
+    const dy = piggy.position.y - powerUp.position.y;
+    const distanceSq = dx * dx + dy * dy;
+    if (distanceSq < (piggyHalfWidth + 0.3) ** 2) {
+      scene.remove(powerUp);
+      powerUps.splice(i, 1);
+      activateSuperJump();
     }
   }
 
@@ -226,7 +272,7 @@ function animate() {
     currentTime - lastJumpTime >= dynamicJumpCooldown
   ) {
     if (startTime === null) {
-      startTime = currentTime; // Set startTime at first jump
+      startTime = currentTime;
     }
     velocity.y = jumpForce;
     isGrounded = false;
@@ -286,6 +332,14 @@ function animate() {
   renderer.render(scene, camera);
 }
 
+function activateSuperJump() {
+  if (superJumpTimeout) clearTimeout(superJumpTimeout);
+  jumpForce = JUMP_FORCE_SUPER;
+  superJumpTimeout = setTimeout(() => {
+    jumpForce = JUMP_FORCE_NORMAL;
+  }, 10000);
+}
+
 // Restart game
 function restartGame() {
   gameOver = false;
@@ -298,6 +352,15 @@ function restartGame() {
   isGrounded = true;
   lastJumpTime = 0;
   elapsedTime = 0;
+  jumpForce = JUMP_FORCE_NORMAL;
+  if (superJumpTimeout) {
+    clearTimeout(superJumpTimeout);
+    superJumpTimeout = null;
+  }
+
+  // Also, clear power-ups
+  powerUps.forEach((powerUp) => scene.remove(powerUp));
+  powerUps = [];
 
   platforms.forEach((platform) => {
     if (!initialPlatforms.includes(platform)) {
