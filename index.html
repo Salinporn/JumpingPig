@@ -7,26 +7,47 @@
         #info {
             position: absolute;
             top: 10px;
-            width: 100%;
-            text-align: center;
+            width: 300px;
+            text-align: left;
             color: white;
             font-family: Arial, sans-serif;
             pointer-events: none;
             text-shadow: 1px 1px 1px black;
+            padding: 50px;
         }
-        #time {
+        #stats-container {
             position: absolute;
-            top: 10px;
-            left: 10px;
+            top: 50px;
+            right: 50px;
             color: white;
-            font-family: Arial, sans-serif;
+            font-family: sans-serif;
             pointer-events: none;
+            font-size: 24px;
             text-shadow: 1px 1px 1px black;
+            text-align: right;
+            background-color: rgba(0, 0, 0, 0.3);
+            padding: 10px 20px;
+            border-radius: 10px;
+        }
+        #time, #score, #best {
+            margin: 5px 0;
+        }
+        #instructions img {
+            width: 100%;
+            height: auto;
+            margin: 0 auto;
         }
     </style>
 </head>
 <body>
-    <div id="time">Time: 0:00</div>
+    <div id="info">
+        <img id="instructions" src="../assets/images/instructions.png" alt="Instructions" width="400">
+    </div>
+    <div id="stats-container">
+        <div id="time">Time: 0:00</div>
+        <div id="score">Score: 0</div>
+        <div id="best">Best: 0</div>
+    </div>
     <script type="module" src="src/game.js"></script>
 </body>
 </html>
