@@ -1,5 +1,7 @@
 import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.min.js";
-// import { GLTFLoader } from "https://cdn.jsdelivr.net/npm/three/examples/jsm/loaders/GLTFLoader.js";
+// Import the OBJLoader
+import { OBJLoader } from "three/addons/loaders/OBJLoader.js";
+import { MTLLoader } from "three/addons/loaders/MTLLoader.js";
 
 
 class AngryCatsGame {
@@ -17,7 +19,7 @@ class AngryCatsGame {
     document.body.appendChild(this.renderer.domElement);
 
     // Game state management
-    this.gameStage = "INITIAL_POSITION";
+    this.gameStage = "LOADING"; // Changed initial state to loading
     this.objects = [];
     this.gravity = new THREE.Vector3(0, -9.8, 0);
 
@@ -29,8 +31,13 @@ class AngryCatsGame {
     // Aiming line
     this.aimLine = null;
 
+    // Cat model
+    this.cat = null;
+    this.catModelLoaded = false;
+
     // Setup game elements
     this.setupScene();
+    this.loadCatModel(); // Load the 3D model
     this.setupEventListeners();
 
     // Add UI overlay
@@ -58,17 +65,82 @@ class AngryCatsGame {
     ground.position.y = -2;
     this.scene.add(ground);
 
-    // Cat
+    // Blocks
+    this.createBlockStructure();
+  }
+
+  loadCatModel() {
+    const loadingManager = new THREE.LoadingManager();
+    loadingManager.onProgress = (url, itemsLoaded, itemsTotal) => {
+      const progress = Math.round((itemsLoaded / itemsTotal) * 100);
+      if (this.uiOverlay) {
+        this.uiOverlay.textContent = `Loading cat model: ${progress}%`;
+      }
+    };
+
+    // Load MTL (material) file first
+    const mtlLoader = new MTLLoader(loadingManager);
+    mtlLoader.load(
+      "../assets/pig.mtl", // Make sure this path is correct
+      (materials) => {
+        materials.preload(); // Preload materials
+
+        const objLoader = new OBJLoader(loadingManager);
+        objLoader.setMaterials(materials); // Apply materials to OBJ
+        console.log("Materials loaded successfully:", materials);
+
+        // Try loading the cat OBJ file
+        objLoader.load(
+          "../assets/pig.obj", // Make sure this path is correct
+          (object) => {
+            console.log("Cat model loaded successfully:", object);
+            this.cat = object;
+
+            // Ensure model has meshes
+            if (this.cat.children.length === 0) {
+              console.error("ERROR: Model has NO MESHES! Check OBJ file.");
+              this.fallbackToSphere();
+              return;
+            }
+
+            this.cat.scale.set(1.2, 1.2, 1.2);
+            this.cat.position.set(-10, 2, 0);
+            this.scene.add(this.cat);
+            this.catModelLoaded = true;
+
+            // Change game state and update UI
+            this.gameStage = "INITIAL_POSITION";
+            this.updateUIOverlay();
+            this.positionCameraForInitialAim();
+          },
+          // Progress callback
+          (xhr) => {
+            const progress = Math.round((xhr.loaded / xhr.total) * 100);
+            if (this.uiOverlay) {
+              this.uiOverlay.textContent = `Loading cat model: ${progress}%`;
+            }
+          },
+          // Error callback
+          (error) => {
+            console.error("Error loading cat model:", error);
+            this.fallbackToSphere();
+          }
+        );
+      }
+    );
+  }
+
+  // Fallback to a simple sphere when model fails to load
+  fallbackToSphere() {
+    console.log("Fallback to sphere model");
     const catGeometry = new THREE.SphereGeometry(0.5, 32, 32);
     const catMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
     this.cat = new THREE.Mesh(catGeometry, catMaterial);
     this.cat.position.set(-10, 2, 0);
     this.scene.add(this.cat);
-
-    // Blocks
-    this.createBlockStructure();
-
-    // Initial camera position
+    this.catModelLoaded = true;
+    this.gameStage = "INITIAL_POSITION";
+    this.updateUIOverlay();
     this.positionCameraForInitialAim();
   }
 
@@ -81,13 +153,20 @@ class AngryCatsGame {
     this.uiOverlay.style.background = "rgba(0,0,0,0.5)";
     this.uiOverlay.style.padding = "10px";
     this.uiOverlay.style.borderRadius = "5px";
-    this.uiOverlay.textContent = "Adjust Horizontal Angle (Left/Right)";
+    this.uiOverlay.textContent = "Loading cat model...";
     document.body.appendChild(this.uiOverlay);
   }
 
   updateUIOverlay() {
     if (!this.uiOverlay) return;
+
     switch (this.gameStage) {
+      case "LOADING":
+        this.uiOverlay.textContent = "Loading cat model...";
+        break;
+      case "INITIAL_POSITION":
+        this.uiOverlay.textContent = "Adjust Horizontal Angle (Left/Right)";
+        break;
       case "VERTICAL_AIM":
         this.uiOverlay.textContent = "Adjust Vertical Angle (Up/Down)";
         break;
@@ -131,6 +210,9 @@ class AngryCatsGame {
   }
 
   createAimLine() {
+    // Don't create aim line if cat model isn't loaded yet
+    if (!this.catModelLoaded) return;
+
     // Remove existing aim line if it exists
     if (this.aimLine) {
       this.scene.remove(this.aimLine);
@@ -147,7 +229,8 @@ class AngryCatsGame {
     for (let i = 0; i < numPoints; i++) {
       const t = i * 0.1;
       const x = this.cat.position.x + launchVector.x * t;
-      const y = this.cat.position.y + launchVector.y * t + 0.5 * gravity * t * t;
+      const y =
+        this.cat.position.y + launchVector.y * t + 0.5 * gravity * t * t;
       const z = this.cat.position.z + launchVector.z * t;
       points.push(new THREE.Vector3(x, y, z));
     }
@@ -162,18 +245,19 @@ class AngryCatsGame {
   }
 
   positionCameraForInitialAim() {
+    if (!this.catModelLoaded) return;
+
     this.camera.position.set(
       this.cat.position.x - 5,
       this.cat.position.y + 3,
       this.cat.position.z
     );
     this.camera.lookAt(10, 2, 0);
-
-    this.gameStage = "INITIAL_POSITION";
-    this.updateUIOverlay();
   }
 
   positionCameraForVerticalAim() {
+    if (!this.catModelLoaded) return;
+
     this.camera.position.set(
       this.cat.position.x + 15,
       this.cat.position.y + 3,
@@ -201,6 +285,9 @@ class AngryCatsGame {
   }
 
   handleClick(event) {
+    // Don't process clicks if cat model isn't loaded
+    if (!this.catModelLoaded) return;
+
     switch (this.gameStage) {
       case "INITIAL_POSITION":
         this.positionCameraForVerticalAim();
@@ -212,7 +299,8 @@ class AngryCatsGame {
   }
 
   handleMouseMove(event) {
-    if (!this.gameStage) return;
+    // Don't process mouse movements if cat model isn't loaded or game stage not set
+    if (!this.catModelLoaded || !this.gameStage) return;
 
     const mouseX = (event.clientX / window.innerWidth) * 2 - 1;
     const mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
@@ -231,7 +319,10 @@ class AngryCatsGame {
 
   launchCat() {
     // Use the combined launch vector
-    this.cat.velocity = this.calculateLaunchVector();
+    if (!this.cat.velocity) {
+      this.cat.velocity = new THREE.Vector3();
+    }
+    this.cat.velocity.copy(this.calculateLaunchVector());
     this.gameStage = "LAUNCHED";
     this.updateUIOverlay();
 
@@ -243,6 +334,8 @@ class AngryCatsGame {
   }
 
   updatePhysics(deltaTime) {
+    if (!this.catModelLoaded || !this.cat) return;
+
     if (this.cat.velocity) {
       this.cat.velocity.add(this.gravity.clone().multiplyScalar(deltaTime));
       this.cat.position.add(
@@ -250,7 +343,9 @@ class AngryCatsGame {
       );
 
       // Ground collision
-      if (this.cat.position.y < -2) {
+      if (this.cat.position.y < -1.5) {
+        // Adjusted for model's height
+        this.cat.position.y = -1.5;
         this.cat.velocity.set(0, 0, 0);
       }
 
