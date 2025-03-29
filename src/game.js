@@ -45,6 +45,7 @@ const initialPlatformPositions = [
 initialPlatformPositions.forEach((pos) => {
   const platform = new THREE.Mesh(platformGeometry, platformMaterial);
   platform.position.set(pos.x, pos.y, 0);
+  platform.isMoving = false; // Initial platforms are static
   scene.add(platform);
   platforms.push(platform);
   initialPlatforms.push(platform);
@@ -135,17 +136,27 @@ function animate() {
   // Platform spawning
   if (hasJumped) {
     platformSpawnTimer++;
+    elapsedTime = (Date.now() - startTime) / 1000;
+    score = Math.floor(elapsedTime);
     const dynamicSpawnInterval = 100 * (0.05 / currentPlatformSpeed);
     if (platformSpawnTimer > dynamicSpawnInterval) {
       platformSpawnTimer = 0;
       const newPlatform = new THREE.Mesh(platformGeometry, platformMaterial);
       newPlatform.position.y = 20;
       newPlatform.position.x = (Math.random() - 0.5) * 8;
+      newPlatform.isMoving = false;
+
+      if (elapsedTime >= 10 && Math.random() < 0.3) {
+        newPlatform.isMoving = true;
+        newPlatform.direction = Math.random() < 0.5 ? -1 : 1;
+        newPlatform.speed = 0.01;
+        newPlatform.initialX = newPlatform.position.x;
+        newPlatform.movingRange = 10;
+      }
+
       platforms.push(newPlatform);
       scene.add(newPlatform);
     }
-    elapsedTime = (Date.now() - startTime) / 1000;
-    score = Math.floor(elapsedTime);
   }
 
   isGrounded = false;
@@ -182,6 +193,27 @@ function animate() {
     if (platforms[i].position.y < -20) {
       scene.remove(platforms[i]);
       platforms.splice(i, 1);
+    }
+
+    if (elapsedTime >= 10) {
+      // Inside the platforms.forEach loop
+      platforms.forEach((platform) => {
+        if (platform.isMoving) {
+          const nextX =
+            platform.position.x + platform.direction * platform.speed;
+
+          // Check if platform exceeds movement range
+          if (
+            nextX > platform.initialX + platform.movingRange ||
+            nextX < platform.initialX - platform.movingRange
+          ) {
+            platform.direction *= -1; // Reverse direction
+            platform.position.x += platform.direction * platform.speed; // Move within bounds
+          } else {
+            platform.position.x = nextX;
+          }
+        }
+      });
     }
   }
 
@@ -274,6 +306,7 @@ function restartGame() {
   platforms = [...initialPlatforms];
 
   initialPlatforms.forEach((platform, index) => {
+    platform.isMoving = false;
     if (!scene.children.includes(platform)) {
       scene.add(platform);
     }
