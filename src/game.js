@@ -149,7 +149,7 @@ function animate() {
       if (elapsedTime >= 10 && Math.random() < 0.3) {
         newPlatform.isMoving = true;
         newPlatform.direction = Math.random() < 0.5 ? -1 : 1;
-        newPlatform.speed = 0.0;
+        newPlatform.speed = 0.01;
         newPlatform.initialX = newPlatform.position.x;
         newPlatform.movingRange = 10;
       }
