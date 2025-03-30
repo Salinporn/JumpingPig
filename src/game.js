@@ -13,6 +13,27 @@ const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
+// Left side instructions
+const infoDiv = document.createElement('div');
+infoDiv.id = 'info';
+infoDiv.style.position = 'absolute';
+infoDiv.style.top = '10px';
+infoDiv.style.width = '300px';
+infoDiv.style.textAlign = 'left';
+infoDiv.style.color = 'white';
+infoDiv.style.fontFamily = 'Arial, sans-serif';
+infoDiv.style.pointerEvents = 'none';
+infoDiv.style.textShadow = '1px 1px 1px black';
+infoDiv.style.padding = '50px';
+const instructionsImg = document.createElement('img');
+instructionsImg.id = 'instructions';
+instructionsImg.src = '../assets/images/instructions.png';
+instructionsImg.alt = 'Instructions';
+instructionsImg.width = 400;
+infoDiv.appendChild(instructionsImg);
+document.body.appendChild(infoDiv);
+
+
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
 scene.add(ambientLight);
 const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
