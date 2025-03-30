@@ -1,4 +1,4 @@
-# AngryCat
+# Jumping Pig
 
 # Installation
 npm install three
