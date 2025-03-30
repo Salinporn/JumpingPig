@@ -51,19 +51,17 @@ initialPlatformPositions.forEach((pos) => {
   initialPlatforms.push(platform);
 });
 
-const powerUpGeometry = new THREE.SphereGeometry(0.3);
-const powerUpMaterial = new THREE.MeshStandardMaterial({
-  color: 0x00ff00,
-  emissive: 0x00ff00,
-  emissiveIntensity: 0.5,
-});
+let star = null;
 let powerUps = [];
 const JUMP_FORCE_NORMAL = 0.4;
 const JUMP_FORCE_SUPER = 0.6;
 let jumpForce = JUMP_FORCE_NORMAL;
 let superJumpTimeout = null;
 
-// Piggy variables
+let hasSeenSuperJumpTutorial = false;
+let hasSeenMovingPlatformTutorial = false;
+let gamePaused = false;
+
 let piggy = null;
 let piggyHalfHeight = 0.5;
 let piggyHalfWidth = 0.5;
@@ -97,13 +95,37 @@ objLoader.load(
     piggy.position.set(0, 0, 0);
     piggy.scale.set(1.5, 1.5, 1.5);
     scene.add(piggy);
-    startGame();
+    
+    objLoader.load(
+      "assets/models/Star.obj",
+      (object) => {
+        star = object;
+        
+        object.traverse((child) => {
+          if (child.isMesh) {
+            child.material = new THREE.MeshStandardMaterial({
+              color: 0xFFFF00,
+              emissive: 0xFFFF00,
+              emissiveIntensity: 0.5,
+              side: THREE.DoubleSide,
+            });
+            child.castShadow = true;
+            child.receiveShadow = true;
+          }
+        });
+        
+        star.scale.set(1.0, 1.0, 1.0);
+        
+        startGame();
+      },
+      undefined,
+      (err) => console.error("Error loading arrow model:", err)
+    );
   },
   undefined,
-  (err) => console.error(err)
+  (err) => console.error("Error loading piggy model:", err)
 );
 
-// Game variables
 let velocity = new THREE.Vector3(0, 0, 0);
 const gravity = new THREE.Vector3(0, -0.02, 0);
 let score = 0;
@@ -119,6 +141,8 @@ const MIN_JUMP_COOLDOWN = 300;
 const MAX_PLATFORM_SPEED = 0.115;
 let lastJumpTime = 0;
 let highestTime = 0;
+let countdownActive = false;
+let countdownValue = 3;
 
 // Load highest score from localStorage if available
 if (localStorage.getItem("highestScore")) {
@@ -128,7 +152,6 @@ if (localStorage.getItem("highestTime")) {
   highestTime = parseFloat(localStorage.getItem("highestTime"));
 }
 
-// Camera position
 camera.position.z = 20;
 
 // Keyboard input
@@ -140,19 +163,175 @@ window.addEventListener("keyup", (event) => {
   keys[event.key] = false;
 });
 
+// Countdown after tutorial
+function startCountdown() {
+  countdownActive = true;
+  countdownValue = 3;
+  
+  const countdownOverlay = document.createElement("div");
+  countdownOverlay.style.position = "fixed";
+  countdownOverlay.style.top = "0";
+  countdownOverlay.style.left = "0";
+  countdownOverlay.style.width = "100%";
+  countdownOverlay.style.height = "100%";
+  countdownOverlay.style.backgroundColor = "rgba(0, 0, 0, 0.3)";
+  countdownOverlay.style.color = "#fff";
+  countdownOverlay.style.display = "flex";
+  countdownOverlay.style.justifyContent = "center";
+  countdownOverlay.style.alignItems = "center";
+  countdownOverlay.style.zIndex = "999";
+  countdownOverlay.style.fontFamily = "Arial, sans-serif";
+  
+  const countdownText = document.createElement("div");
+  countdownText.textContent = countdownValue.toString();
+  countdownText.style.fontSize = "120px";
+  countdownText.style.fontWeight = "bold";
+  countdownText.style.color = "#ea3d8c";
+  countdownText.style.textShadow = "0 0 10px rgba(255, 255, 255, 0.5)";
+  
+  countdownOverlay.appendChild(countdownText);
+  document.body.appendChild(countdownOverlay);
+  
+  const countdownInterval = setInterval(() => {
+    countdownValue--;
+    countdownText.textContent = countdownValue.toString();
+    
+    if (countdownValue <= 0) {
+      clearInterval(countdownInterval);
+      document.body.removeChild(countdownOverlay);
+      countdownActive = false;
+      gamePaused = false;
+      requestAnimationFrame(animate);
+    }
+  }, 1000);
+}
+
+// Instruction overlay
+function showInstructionOverlay(type) {
+  gamePaused = true;
+  
+  const overlay = document.createElement("div");
+  overlay.className = "tutorial-overlay";
+  overlay.style.position = "fixed";
+  overlay.style.top = "0";
+  overlay.style.left = "0";
+  overlay.style.width = "100%";
+  overlay.style.height = "100%";
+  overlay.style.backgroundColor = "rgba(0, 0, 0, 0.7)";
+  overlay.style.color = "#fff";
+  overlay.style.display = "flex";
+  overlay.style.flexDirection = "column";
+  overlay.style.justifyContent = "center";
+  overlay.style.alignItems = "center";
+  overlay.style.zIndex = "1000";
+  overlay.style.fontFamily = "Arial, sans-serif";
+  overlay.style.textAlign = "center";
+  
+  let title, description;
+  
+  if (type === "superJump") {
+    title = "Super Jump Power-Up!";
+    description = "Collect the yellow star to jump higher for 10 seconds!";
+  } else if (type === "movingPlatform") {
+    title = "Moving Platform!";
+    description = "These platforms move side to side! Time your jumps carefully.";
+  }
+  
+  const keyInstruction = document.createElement("p");
+  keyInstruction.textContent = "Click Continue to resume";
+  keyInstruction.style.fontSize = "14px";
+  keyInstruction.style.color = "#cccccc";
+  keyInstruction.style.marginTop = "20px";
+  
+  const titleElement = document.createElement("h2");
+  titleElement.textContent = title;
+  titleElement.style.fontSize = "28px";
+  titleElement.style.marginBottom = "10px";
+  titleElement.style.color = "#ea3d8c";
+  overlay.appendChild(titleElement);
+  
+  const mediaContainer = document.createElement("div");
+  mediaContainer.style.margin = "15px 0";
+  mediaContainer.style.width = "300px";
+  mediaContainer.style.height = "200px";
+  mediaContainer.style.display = "flex";
+  mediaContainer.style.alignItems = "center";
+  mediaContainer.style.justifyContent = "center";
+
+  if (type === "superJump") {
+    const placeholderText = document.createElement("div");
+    placeholderText.innerHTML = `<div style="font-size: 48px; color: #ffff00;">★</div>`;
+    mediaContainer.appendChild(placeholderText);
+  } else {
+    const video = document.createElement("video");
+    video.src = "assets/videos/moving_platform.mp4";
+    video.autoplay = true;
+    video.loop = true;
+    video.muted = true;
+    video.controls = false;
+    video.style.maxWidth = "100%";
+    video.style.maxHeight = "100%";
+    video.addEventListener('click', function(e) {
+      e.preventDefault();
+      return false;
+    });
+    mediaContainer.appendChild(video);
+  }
+  
+  overlay.appendChild(mediaContainer);
+  
+  const descriptionElement = document.createElement("p");
+  descriptionElement.textContent = description;
+  descriptionElement.style.fontSize = "18px";
+  descriptionElement.style.margin = "15px 0";
+  descriptionElement.style.maxWidth = "500px";
+  overlay.appendChild(descriptionElement);
+  overlay.appendChild(keyInstruction);
+  
+  const continueButton = document.createElement("button");
+  continueButton.className = "tutorial-continue-button";
+  continueButton.textContent = "Continue";
+  continueButton.style.marginTop = "2px";
+  continueButton.style.padding = "12px 24px";
+  continueButton.style.fontSize = "1rem";
+  continueButton.style.cursor = "pointer";
+  continueButton.style.backgroundColor = "#ea3d8c";
+  continueButton.style.color = "#fff";
+  continueButton.style.border = "none";
+  continueButton.style.borderRadius = "8px";
+  continueButton.style.boxShadow = "0 5px 15px rgba(234, 61, 140, 0.3)";
+  continueButton.style.transition = "all 0.3s ease";
+  
+  continueButton.addEventListener("mouseover", () => {
+    continueButton.style.backgroundColor = "#f07ab3";
+  });
+  
+  continueButton.addEventListener("mouseout", () => {
+    continueButton.style.backgroundColor = "#ea3d8c";
+  });
+  
+  continueButton.addEventListener("click", () => {
+    document.body.removeChild(overlay);
+    startCountdown();
+  });
+  
+  overlay.appendChild(continueButton);
+  document.body.appendChild(overlay);
+}
+
 // Animation loop
 function animate() {
-  if (gameOver || !piggy) return;
-
+  if (gameOver || !piggy || gamePaused || countdownActive) return;
+  
   requestAnimationFrame(animate);
-
+  
   velocity.add(gravity);
   piggy.position.add(velocity);
-
+  
   // Update platform speed
   currentPlatformSpeed = Math.min(0.05 + score * 0.003, MAX_PLATFORM_SPEED);
   dynamicJumpCooldown = Math.max(500 - score * 15, MIN_JUMP_COOLDOWN);
-
+  
   // Platform spawning
   if (hasJumped) {
     platformSpawnTimer++;
@@ -176,15 +355,19 @@ function animate() {
         newPlatform.speed = 0.01;
         newPlatform.initialX = newPlatform.position.x;
         newPlatform.movingRange = 10;
+        
+        // Check if it's the first time seeing a moving platform
+        if (!hasSeenMovingPlatformTutorial && elapsedTime >= 10) {
+          hasSeenMovingPlatformTutorial = true;
+          setTimeout(() => {
+            showInstructionOverlay("movingPlatform");
+          }, 500);
+        }
       }
 
-      if (!newPlatform.isMoving && Math.random() < 0.03) {
-        const powerUp = new THREE.Mesh(powerUpGeometry, powerUpMaterial);
-        powerUp.position.set(
-          newPlatform.position.x,
-          newPlatform.position.y + 0.5,
-          0
-        );
+      if (!newPlatform.isMoving && Math.random() < 0.03 && star) {
+        const powerUp = star.clone();
+        powerUp.position.set(newPlatform.position.x, newPlatform.position.y + 1.0, 0);
         scene.add(powerUp);
         powerUps.push(powerUp);
       }
@@ -228,34 +411,36 @@ function animate() {
       scene.remove(platforms[i]);
       platforms.splice(i, 1);
     }
-
-    // Move platforms if they are moving
-    if (elapsedTime >= 10) {
-      platforms.forEach((platform) => {
-        if (platform.isMoving) {
-          const nextX =
-            platform.position.x + platform.direction * platform.speed;
-
-          if (
-            nextX > platform.initialX + platform.movingRange ||
-            nextX < platform.initialX - platform.movingRange
-          ) {
-            platform.direction *= -1;
-            platform.position.x += platform.direction * platform.speed;
-          } else {
-            platform.position.x = nextX;
-          }
-        }
-      });
-    }
   }
 
+  // Move platforms if they are moving
+  if (elapsedTime >= 10) {
+    platforms.forEach((platform) => {
+      if (platform.isMoving) {
+        const nextX =
+          platform.position.x + platform.direction * platform.speed;
+
+        if (
+          nextX > platform.initialX + platform.movingRange ||
+          nextX < platform.initialX - platform.movingRange
+        ) {
+          platform.direction *= -1;
+          platform.position.x += platform.direction * platform.speed;
+        } else {
+          platform.position.x = nextX;
+        }
+      }
+    });
+  }
+
+  // Power-up handling with tutorial integration
   for (let i = powerUps.length - 1; i >= 0; i--) {
     const powerUp = powerUps[i];
     powerUp.position.y -= currentPlatformSpeed;
-    powerUp.rotation.x += 0.01;
-    powerUp.rotation.y += 0.01;
-
+    
+    // Rotate the star powerup to create a floating effect
+    powerUp.rotation.y += 0.02;
+    
     // Remove off-screen power-ups
     if (powerUp.position.y < -20) {
       scene.remove(powerUp);
@@ -263,11 +448,21 @@ function animate() {
       continue;
     }
 
-    // Collision detection
+    // Check if this is the first super jump the player is about to collect
     const dx = piggy.position.x - powerUp.position.x;
     const dy = piggy.position.y - powerUp.position.y;
     const distanceSq = dx * dx + dy * dy;
-    if (distanceSq < (piggyHalfWidth + 0.3) ** 2) {
+    
+    // If the player is getting close to their first power-up, show the tutorial
+    const closeToFirstPowerUp = distanceSq < (piggyHalfWidth + 1.5) ** 2;
+    if (!hasSeenSuperJumpTutorial && closeToFirstPowerUp) {
+      hasSeenSuperJumpTutorial = true;
+      showInstructionOverlay("superJump");
+      break; // Break the loop to prevent further processing until the tutorial is closed
+    }
+
+    // Actual collision detection
+    if (distanceSq < (piggyHalfWidth + 0.5) ** 2) {
       scene.remove(powerUp);
       powerUps.splice(i, 1);
       activateSuperJump();
@@ -308,7 +503,6 @@ function animate() {
       localStorage.setItem("highestScore", highestScore.toString());
     }
 
-    // Game over overlay
     const overlay = document.createElement("div");
     overlay.style.position = "fixed";
     overlay.style.top = "0";
@@ -326,7 +520,6 @@ function animate() {
     overlay.style.fontFamily = "Arial, sans-serif";
     overlay.style.textAlign = "center";
 
-    // Game over image
     const image = document.createElement("img");
     image.src = "assets/images/gameover.png";
     image.alt = "Game Over";
@@ -334,7 +527,6 @@ function animate() {
     image.style.marginBottom = "30px";
     overlay.appendChild(image);
 
-    // Game over message container
     const message = document.createElement("div");
     message.style.textAlign = "left";
     message.style.width = "100%";
@@ -360,8 +552,6 @@ function animate() {
 
     overlay.appendChild(message);
 
-
-    // Restart button
     const restartButton = document.createElement("button");
     restartButton.textContent = "Restart";
     restartButton.style.marginTop = "20px";
@@ -389,7 +579,6 @@ function animate() {
     document.body.appendChild(overlay);
   }
 
-  // Update HUD with separate elements
   document.getElementById("time").textContent = `Time: ${elapsedTime.toFixed(
     2
   )}`;
@@ -420,12 +609,14 @@ function restartGame() {
   lastJumpTime = 0;
   elapsedTime = 0;
   jumpForce = JUMP_FORCE_NORMAL;
+  hasSeenSuperJumpTutorial = false;
+  hasSeenMovingPlatformTutorial = false;
+  
   if (superJumpTimeout) {
     clearTimeout(superJumpTimeout);
     superJumpTimeout = null;
   }
 
-  // Also, clear power-ups
   powerUps.forEach((powerUp) => scene.remove(powerUp));
   powerUps = [];
 
@@ -462,6 +653,8 @@ function startGame() {
   hasJumped = false;
   isGrounded = true;
   lastJumpTime = 0;
+  hasSeenSuperJumpTutorial = false;
+  hasSeenMovingPlatformTutorial = false;
 
   // Clear non-initial platforms
   platforms.forEach((platform) => {
@@ -479,7 +672,6 @@ function startGame() {
   animate();
 }
 
-// Resize handler
 window.addEventListener("resize", () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
