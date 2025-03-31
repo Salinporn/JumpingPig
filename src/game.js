@@ -17,6 +17,13 @@ camera.position.z = 20;
 // Audio
 let audioListener;
 let jumpSound;
+let bgMusic;
+let starSound;
+let bgGameOver;
+let clickSound;
+let bgmVolume = 0.2;
+let sfxVolume = 0.3;
+let isMuted = false;
 audioListener = new THREE.AudioListener();
 camera.add(audioListener);
 
@@ -38,6 +45,146 @@ instructionsImg.alt = "Instructions";
 instructionsImg.width = 400;
 infoDiv.appendChild(instructionsImg);
 document.body.appendChild(infoDiv);
+
+// Sound settings panel
+const soundSettingsDiv = document.createElement("div");
+soundSettingsDiv.id = "sound-settings";
+soundSettingsDiv.style.marginTop = "20px";
+soundSettingsDiv.style.padding = "10px";
+soundSettingsDiv.style.backgroundColor = "rgba(0, 0, 0, 0.5)";
+soundSettingsDiv.style.borderRadius = "8px";
+soundSettingsDiv.style.color = "white";
+soundSettingsDiv.style.fontFamily = "Arial, sans-serif";
+soundSettingsDiv.style.width = "300px";
+soundSettingsDiv.style.pointerEvents = "auto";
+
+const settingsTitle = document.createElement("h3");
+settingsTitle.textContent = "Sound Settings";
+settingsTitle.style.margin = "0 0 10px 0";
+settingsTitle.style.fontSize = "16px";
+settingsTitle.style.fontWeight = "bold";
+soundSettingsDiv.appendChild(settingsTitle);
+
+const bgmContainer = document.createElement("div");
+bgmContainer.style.display = "flex";
+bgmContainer.style.alignItems = "center";
+bgmContainer.style.marginBottom = "10px";
+
+const bgmLabel = document.createElement("label");
+bgmLabel.textContent = "BGM: ";
+bgmLabel.style.flexBasis = "50px";
+bgmLabel.style.fontSize = "14px";
+bgmContainer.appendChild(bgmLabel);
+
+const bgmSlider = document.createElement("input");
+bgmSlider.type = "range";
+bgmSlider.min = "0";
+bgmSlider.max = "100";
+bgmSlider.value = bgmVolume * 100;
+bgmSlider.style.flex = "1";
+bgmSlider.addEventListener("input", () => {
+  if (!isMuted) {
+    bgmVolume = bgmSlider.value / 100;
+    if (bgMusic) bgMusic.setVolume(bgmVolume);
+    if (bgGameOver) bgGameOver.setVolume(bgmVolume);
+  }
+});
+bgmContainer.appendChild(bgmSlider);
+
+soundSettingsDiv.appendChild(bgmContainer);
+
+// SFX volume control
+const sfxContainer = document.createElement("div");
+sfxContainer.style.display = "flex";
+sfxContainer.style.alignItems = "center";
+sfxContainer.style.marginBottom = "10px";
+
+const sfxLabel = document.createElement("label");
+sfxLabel.textContent = "SFX: ";
+sfxLabel.style.flexBasis = "50px";
+sfxLabel.style.fontSize = "14px";
+sfxContainer.appendChild(sfxLabel);
+
+const sfxSlider = document.createElement("input");
+sfxSlider.type = "range";
+sfxSlider.min = "0";
+sfxSlider.max = "100";
+sfxSlider.value = sfxVolume * 100;
+sfxSlider.style.flex = "1";
+sfxSlider.addEventListener("input", () => {
+  if (!isMuted) {
+    sfxVolume = sfxSlider.value / 100;
+    if (jumpSound) jumpSound.setVolume(sfxVolume-0.2);
+    if (starSound) starSound.setVolume(sfxVolume);
+    if (clickSound) clickSound.setVolume(sfxVolume);
+  }
+});
+sfxContainer.appendChild(sfxSlider);
+
+soundSettingsDiv.appendChild(sfxContainer);
+
+// Mute button
+const muteContainer = document.createElement("div");
+muteContainer.style.display = "flex";
+muteContainer.style.justifyContent = "center";
+
+const muteButton = document.createElement("button");
+muteButton.textContent = "Mute";
+muteButton.style.padding = "5px 15px";
+muteButton.style.backgroundColor = "#ea3d8c";
+muteButton.style.color = "white";
+muteButton.style.border = "none";
+muteButton.style.borderRadius = "4px";
+muteButton.style.cursor = "pointer";
+muteButton.style.fontSize = "14px";
+muteButton.style.transition = "background-color 0.2s";
+
+muteButton.addEventListener("mouseover", () => {
+  muteButton.style.backgroundColor = "#f07ab3";
+});
+
+muteButton.addEventListener("mouseout", () => {
+  muteButton.style.backgroundColor = isMuted ? "#555555" : "#ea3d8c";
+});
+
+muteButton.addEventListener("click", () => {
+  isMuted = !isMuted;
+  
+  if (clickSound) clickSound.play();
+  
+  if (isMuted) {
+    muteButton.textContent = "Unmute";
+    muteButton.style.backgroundColor = "#555555";
+    
+    // Mute all sounds
+    if (bgMusic && bgMusic.isPlaying) bgMusic.setVolume(0);
+    if (bgGameOver && bgGameOver.isPlaying) bgGameOver.setVolume(0);
+    if (jumpSound) jumpSound.setVolume(0);
+    if (starSound) starSound.setVolume(0);
+    if (clickSound) clickSound.setVolume(0);
+  } else {
+    muteButton.textContent = "Mute";
+    muteButton.style.backgroundColor = "#ea3d8c";
+    
+    // Restore all volumes
+    if (bgMusic && bgMusic.isPlaying) bgMusic.setVolume(bgmVolume);
+    if (bgGameOver && bgGameOver.isPlaying) bgGameOver.setVolume(bgmVolume);
+    if (jumpSound) jumpSound.setVolume(sfxVolume-0.2);
+    if (starSound) starSound.setVolume(sfxVolume);
+    if (clickSound) clickSound.setVolume(sfxVolume);
+  }
+});
+
+muteContainer.appendChild(muteButton);
+soundSettingsDiv.appendChild(muteContainer);
+
+infoDiv.appendChild(soundSettingsDiv);
+
+function playClickSound() {
+  if (clickSound && !isMuted) {
+    clickSound.play();
+  }
+}
 
 // Scene, Background and lighting
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
@@ -123,11 +270,38 @@ objLoader.load(
       }
     });
 
+    // Load audio files
     const soundLoader = new THREE.AudioLoader();
     soundLoader.load("assets/audios/jump.mp3", (buffer) => {
       jumpSound = new THREE.Audio(audioListener);
       jumpSound.setBuffer(buffer);
-      jumpSound.setVolume(0.3);
+      jumpSound.setVolume(sfxVolume-0.2);
+    });
+    
+    soundLoader.load("assets/audios/bgMusic.wav", (buffer) => {
+      bgMusic = new THREE.Audio(audioListener);
+      bgMusic.setBuffer(buffer);
+      bgMusic.setVolume(bgmVolume);
+      bgMusic.setLoop(true);
+    });
+    
+    soundLoader.load("assets/audios/star.wav", (buffer) => {
+      starSound = new THREE.Audio(audioListener);
+      starSound.setBuffer(buffer);
+      starSound.setVolume(sfxVolume);
+    });
+    
+    soundLoader.load("assets/audios/bgGameOver.mp3", (buffer) => {
+      bgGameOver = new THREE.Audio(audioListener);
+      bgGameOver.setBuffer(buffer);
+      bgGameOver.setVolume(bgmVolume);
+      bgGameOver.setLoop(true);
+    });
+
+    soundLoader.load("assets/audios/click.wav", (buffer) => {
+      clickSound = new THREE.Audio(audioListener);
+      clickSound.setBuffer(buffer);
+      clickSound.setVolume(sfxVolume);
     });
 
     if (firstMesh) {
@@ -245,6 +419,11 @@ function startCountdown() {
       document.body.removeChild(countdownOverlay);
       countdownActive = false;
       gamePaused = false;
+
+      if (bgMusic && !bgMusic.isPlaying && !isMuted) {
+        bgMusic.play();
+      }
+      
       requestAnimationFrame(animate);
     }
   }, 1000);
@@ -356,6 +535,9 @@ function showInstructionOverlay(type) {
   });
 
   continueButton.addEventListener("click", () => {
+    if (clickSound && !isMuted) {
+      clickSound.play();
+    }
     document.body.removeChild(overlay);
     startCountdown();
   });
@@ -511,6 +693,11 @@ function animate() {
     if (distanceSq < (piggyHalfWidth + 0.5) ** 2) {
       scene.remove(powerUp);
       powerUps.splice(i, 1);
+
+      if (starSound && !isMuted) {
+        starSound.play();
+      }
+      
       activateSuperJump();
     }
   }
@@ -533,7 +720,7 @@ function animate() {
     hasJumped = true;
     lastJumpTime = currentTime;
 
-    if (jumpSound) {
+    if (jumpSound && !isMuted) {
       jumpSound.play();
     }
   }
@@ -565,6 +752,14 @@ function animate() {
   // Game over check
   if (piggy.position.y < -window.innerHeight / 20) {
     gameOver = true;
+    
+    if (bgMusic && bgMusic.isPlaying) {
+      bgMusic.stop();
+    }
+    
+    if (bgGameOver && !isMuted) {
+      bgGameOver.play();
+    }
 
     // Highest score handling
     if (elapsedTime > highestTime) {
@@ -649,7 +844,16 @@ function animate() {
       restartButton.style.backgroundColor = "#ea3d8c";
     });
     restartButton.addEventListener("click", () => {
+      if (clickSound && !isMuted) {
+        clickSound.play();
+      }
+
       document.body.removeChild(overlay);
+
+      if (bgGameOver && bgGameOver.isPlaying) {
+        bgGameOver.stop();
+      }
+
       restartGame();
     });
     overlay.appendChild(restartButton);
@@ -692,6 +896,10 @@ function restartGame() {
   scene.background = new THREE.Color(0x0f0525);
   lastBackgroundChangeTime = 0;
   instructionsImg.src = "../assets/images/instructions.png";
+
+  if (bgMusic && !bgMusic.isPlaying && !isMuted) {
+    bgMusic.play();
+  }
 
   if (superJumpTimeout) {
     clearTimeout(superJumpTimeout);
@@ -738,6 +946,10 @@ function startGame() {
   lastBackgroundChangeTime = 0;
   scene.background = new THREE.Color(0x0f0525);
   instructionsImg.src = "../assets/images/instructions.png";
+  
+  if (bgMusic && !bgMusic.isPlaying) {
+    bgMusic.play();
+  }
 
   // Clear non-initial platforms
   platforms.forEach((platform) => {
@@ -754,9 +966,3 @@ function startGame() {
 
   animate();
 }
-
-window.addEventListener("resize", () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-});
