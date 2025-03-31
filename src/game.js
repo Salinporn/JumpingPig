@@ -32,14 +32,17 @@ instructionsImg.width = 400;
 infoDiv.appendChild(instructionsImg);
 document.body.appendChild(infoDiv);
 
+// Scene, Background and lighting
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
 scene.add(ambientLight);
 const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
 directionalLight.position.set(0, 5, 10);
 scene.add(directionalLight);
 scene.background = new THREE.Color(0x0F0525);
+let backgroundIsWhite = false;
+let lastBackgroundChangeTime = 0;
 
-// Geometry and materials
+// Platform
 const platformGeometry = new THREE.BoxGeometry(5, 0.5, 1);
 const platformMaterial = new THREE.MeshBasicMaterial({ color: 0x808080 });
 
@@ -71,6 +74,14 @@ initialPlatformPositions.forEach((pos) => {
   initialPlatforms.push(platform);
 });
 
+// Tutorial
+let hasSeenSuperJumpTutorial =
+  localStorage.getItem("hasSeenSuperJumpTutorial") === "true";
+let hasSeenMovingPlatformTutorial =
+  localStorage.getItem("hasSeenMovingPlatformTutorial") === "true";
+let gamePaused = false;
+
+// Power-up
 let star = null;
 let powerUps = [];
 const JUMP_FORCE_NORMAL = 0.4;
@@ -78,21 +89,14 @@ const JUMP_FORCE_SUPER = 0.6;
 let jumpForce = JUMP_FORCE_NORMAL;
 let superJumpTimeout = null;
 
-let hasSeenSuperJumpTutorial =
-  localStorage.getItem("hasSeenSuperJumpTutorial") === "true";
-let hasSeenMovingPlatformTutorial =
-  localStorage.getItem("hasSeenMovingPlatformTutorial") === "true";
-let gamePaused = false;
-
+// Piggy
 let piggy = null;
 let piggyHalfHeight = 0.5;
 let piggyHalfWidth = 0.5;
 
 let maxPiggyY = 0;
 
-let backgroundIsWhite = false;
-let lastBackgroundChangeTime = 0;
-
+// Load Objects-Models
 const objLoader = new OBJLoader();
 objLoader.load(
   "assets/models/piggy.obj",
@@ -153,6 +157,7 @@ objLoader.load(
   (err) => console.error("Error loading piggy model:", err)
 );
 
+// Other Game variables
 let velocity = new THREE.Vector3(0, 0, 0);
 const gravity = new THREE.Vector3(0, -0.02, 0);
 let score = 0;
