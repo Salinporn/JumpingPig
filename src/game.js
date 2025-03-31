@@ -21,8 +21,8 @@ let bgMusic;
 let starSound;
 let bgGameOver;
 let clickSound;
-let bgmVolume = 0.2; // Default BGM volume
-let sfxVolume = 0.3; // Default SFX volume
+let bgmVolume = 0.2;
+let sfxVolume = 0.3;
 let isMuted = false;
 audioListener = new THREE.AudioListener();
 camera.add(audioListener);
@@ -46,7 +46,7 @@ instructionsImg.width = 400;
 infoDiv.appendChild(instructionsImg);
 document.body.appendChild(infoDiv);
 
-// Create sound settings panel below instructions
+// Sound settings panel
 const soundSettingsDiv = document.createElement("div");
 soundSettingsDiv.id = "sound-settings";
 soundSettingsDiv.style.marginTop = "20px";
@@ -58,7 +58,6 @@ soundSettingsDiv.style.fontFamily = "Arial, sans-serif";
 soundSettingsDiv.style.width = "300px";
 soundSettingsDiv.style.pointerEvents = "auto";
 
-// Create title
 const settingsTitle = document.createElement("h3");
 settingsTitle.textContent = "Sound Settings";
 settingsTitle.style.margin = "0 0 10px 0";
@@ -66,7 +65,6 @@ settingsTitle.style.fontSize = "16px";
 settingsTitle.style.fontWeight = "bold";
 soundSettingsDiv.appendChild(settingsTitle);
 
-// Create BGM volume control
 const bgmContainer = document.createElement("div");
 bgmContainer.style.display = "flex";
 bgmContainer.style.alignItems = "center";
@@ -95,7 +93,7 @@ bgmContainer.appendChild(bgmSlider);
 
 soundSettingsDiv.appendChild(bgmContainer);
 
-// Create SFX volume control
+// SFX volume control
 const sfxContainer = document.createElement("div");
 sfxContainer.style.display = "flex";
 sfxContainer.style.alignItems = "center";
@@ -125,7 +123,7 @@ sfxContainer.appendChild(sfxSlider);
 
 soundSettingsDiv.appendChild(sfxContainer);
 
-// Create mute button
+// Mute button
 const muteContainer = document.createElement("div");
 muteContainer.style.display = "flex";
 muteContainer.style.justifyContent = "center";
@@ -180,10 +178,8 @@ muteButton.addEventListener("click", () => {
 muteContainer.appendChild(muteButton);
 soundSettingsDiv.appendChild(muteContainer);
 
-// Add sound settings to the info div (after instructions image)
 infoDiv.appendChild(soundSettingsDiv);
 
-// Function to play click sound
 function playClickSound() {
   if (clickSound && !isMuted) {
     clickSound.play();
