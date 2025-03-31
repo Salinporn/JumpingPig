@@ -17,6 +17,8 @@ camera.position.z = 20;
 // Audio
 let audioListener;
 let jumpSound;
+let bgMusic;
+let starSound;
 audioListener = new THREE.AudioListener();
 camera.add(audioListener);
 
@@ -123,11 +125,26 @@ objLoader.load(
       }
     });
 
+    // Load audio files
     const soundLoader = new THREE.AudioLoader();
     soundLoader.load("assets/audios/jump.mp3", (buffer) => {
       jumpSound = new THREE.Audio(audioListener);
       jumpSound.setBuffer(buffer);
-      jumpSound.setVolume(0.3);
+      jumpSound.setVolume(0.1);
+    });
+    
+    soundLoader.load("assets/audios/bgMusic.wav", (buffer) => {
+      bgMusic = new THREE.Audio(audioListener);
+      bgMusic.setBuffer(buffer);
+      bgMusic.setVolume(0.2);
+      bgMusic.setLoop(true);
+      bgMusic.play();
+    });
+    
+    soundLoader.load("assets/audios/star.wav", (buffer) => {
+      starSound = new THREE.Audio(audioListener);
+      starSound.setBuffer(buffer);
+      starSound.setVolume(0.4);
     });
 
     if (firstMesh) {
@@ -245,6 +262,11 @@ function startCountdown() {
       document.body.removeChild(countdownOverlay);
       countdownActive = false;
       gamePaused = false;
+
+      if (bgMusic && !bgMusic.isPlaying) {
+        bgMusic.play();
+      }
+      
       requestAnimationFrame(animate);
     }
   }, 1000);
@@ -511,6 +533,11 @@ function animate() {
     if (distanceSq < (piggyHalfWidth + 0.5) ** 2) {
       scene.remove(powerUp);
       powerUps.splice(i, 1);
+
+      if (starSound) {
+        starSound.play();
+      }
+      
       activateSuperJump();
     }
   }
@@ -565,6 +592,10 @@ function animate() {
   // Game over check
   if (piggy.position.y < -window.innerHeight / 20) {
     gameOver = true;
+    
+    if (bgMusic && bgMusic.isPlaying) {
+      bgMusic.stop();
+    }
 
     // Highest score handling
     if (elapsedTime > highestTime) {
@@ -693,6 +724,10 @@ function restartGame() {
   lastBackgroundChangeTime = 0;
   instructionsImg.src = "../assets/images/instructions.png";
 
+  if (bgMusic && !bgMusic.isPlaying) {
+    bgMusic.play();
+  }
+
   if (superJumpTimeout) {
     clearTimeout(superJumpTimeout);
     superJumpTimeout = null;
@@ -738,6 +773,10 @@ function startGame() {
   lastBackgroundChangeTime = 0;
   scene.background = new THREE.Color(0x0f0525);
   instructionsImg.src = "../assets/images/instructions.png";
+  
+  if (bgMusic && !bgMusic.isPlaying) {
+    bgMusic.play();
+  }
 
   // Clear non-initial platforms
   platforms.forEach((platform) => {
@@ -754,9 +793,3 @@ function startGame() {
 
   animate();
 }
-
-window.addEventListener("resize", () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-});
