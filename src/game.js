@@ -27,7 +27,6 @@ infoDiv.style.textShadow = "1px 1px 1px black";
 infoDiv.style.padding = "50px";
 const instructionsImg = document.createElement("img");
 instructionsImg.id = "instructions";
-instructionsImg.src = "../assets/images/instructions.png";
 instructionsImg.alt = "Instructions";
 instructionsImg.width = 400;
 infoDiv.appendChild(instructionsImg);
@@ -671,6 +670,7 @@ function restartGame() {
   backgroundIsWhite = false;
   scene.background = new THREE.Color(0x0F0525);
   lastBackgroundChangeTime = 0;
+  instructionsImg.src = "../assets/images/instructions.png";
 
   if (superJumpTimeout) {
     clearTimeout(superJumpTimeout);
@@ -716,6 +716,7 @@ function startGame() {
   maxPiggyY = 0;
   lastBackgroundChangeTime = 0;
   scene.background = new THREE.Color(0x0F0525);
+  instructionsImg.src = "../assets/images/instructions.png";
 
   // Clear non-initial platforms
   platforms.forEach((platform) => {
