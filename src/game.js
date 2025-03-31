@@ -38,6 +38,7 @@ scene.add(ambientLight);
 const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
 directionalLight.position.set(0, 5, 10);
 scene.add(directionalLight);
+scene.background = new THREE.Color(0x0F0525);
 
 // Geometry and materials
 const platformGeometry = new THREE.BoxGeometry(5, 0.5, 1);
@@ -89,6 +90,9 @@ let piggyHalfHeight = 0.5;
 let piggyHalfWidth = 0.5;
 
 let maxPiggyY = 0;
+
+let backgroundIsWhite = false;
+let lastBackgroundChangeTime = 0;
 
 const objLoader = new OBJLoader();
 objLoader.load(
@@ -168,7 +172,7 @@ let highestTime = 0;
 let countdownActive = false;
 let countdownValue = 3;
 
-// Load highest score from localStorage if available
+// Load highest score
 if (localStorage.getItem("highestScore")) {
   highestScore = parseInt(localStorage.getItem("highestScore"));
 }
@@ -344,7 +348,6 @@ function showInstructionOverlay(type) {
   document.body.appendChild(overlay);
 }
 
-// Animation loop
 function animate() {
   if (gameOver || !piggy || gamePaused || countdownActive) return;
 
@@ -362,7 +365,7 @@ function animate() {
     platformSpawnTimer++;
     elapsedTime = startTime !== null ? (Date.now() - startTime) / 1000 : 0;
 
-    // Update score - base on time plus bonus points for height
+    // Update score
     maxPiggyY = Math.max(maxPiggyY, piggy.position.y);
     const heightScore = Math.max(0, Math.floor(maxPiggyY)) * 2;
     score = Math.floor(elapsedTime) + heightScore;
@@ -378,11 +381,11 @@ function animate() {
       if (elapsedTime >= 10 && Math.random() < 0.3) {
         newPlatform.isMoving = true;
         newPlatform.direction = Math.random() < 0.5 ? -1 : 1;
-        newPlatform.speed = 0.01;
+        newPlatform.speed = 0.05;
         newPlatform.initialX = newPlatform.position.x;
-        newPlatform.movingRange = 10;
+        newPlatform.movingRange = 6;
 
-        // Check if it's the first time seeing a moving platform
+        // Moving Platform Tutorial
         if (!hasSeenMovingPlatformTutorial && elapsedTime >= 10) {
           hasSeenMovingPlatformTutorial = true;
           localStorage.setItem("hasSeenMovingPlatformTutorial", "true");
@@ -444,7 +447,6 @@ function animate() {
     }
   }
 
-  // Move platforms if they are moving
   if (elapsedTime >= 10) {
     platforms.forEach((platform) => {
       if (platform.isMoving) {
@@ -463,27 +465,24 @@ function animate() {
     });
   }
 
-  // Power-up handling with tutorial integration
+  // Power-up
   for (let i = powerUps.length - 1; i >= 0; i--) {
     const powerUp = powerUps[i];
     powerUp.position.y -= currentPlatformSpeed;
 
-    // Rotate the star powerup to create a floating effect
     powerUp.rotation.y += 0.02;
 
-    // Remove off-screen power-ups
     if (powerUp.position.y < -20) {
       scene.remove(powerUp);
       powerUps.splice(i, 1);
       continue;
     }
 
-    // Check if this is the first super jump the player is about to collect
+    // Power Up Tutorial
     const dx = piggy.position.x - powerUp.position.x;
     const dy = piggy.position.y - powerUp.position.y;
     const distanceSq = dx * dx + dy * dy;
 
-    // If the player is getting close to their first power-up, show the tutorial
     const closeToFirstPowerUp = distanceSq < (piggyHalfWidth + 1.5) ** 2;
     if (!hasSeenSuperJumpTutorial && closeToFirstPowerUp) {
       hasSeenSuperJumpTutorial = true;
@@ -519,11 +518,35 @@ function animate() {
     lastJumpTime = currentTime;
   }
 
+  // dynamic background color change
+  if (elapsedTime - lastBackgroundChangeTime > 60) {
+    lastBackgroundChangeTime = elapsedTime;
+    backgroundIsWhite = !backgroundIsWhite;
+    
+    if (backgroundIsWhite) {
+      scene.background = new THREE.Color(0x87CEEB); // Sky blue for day
+      infoDiv.style.color = "black";
+      infoDiv.style.textShadow = "1px 1px 1px rgba(255, 255, 255, 0.7)";
+      document.getElementById("time").style.color = "black";
+      document.getElementById("score").style.color = "black";
+      document.getElementById("best").style.color = "black";
+      instructionsImg.src = "../assets/images/instructions2.png";
+    } else {
+      scene.background = new THREE.Color(0x0F0525); // Dark blue for night
+      infoDiv.style.color = "white";
+      infoDiv.style.textShadow = "1px 1px 1px rgba(0, 0, 0, 0.7)";
+      document.getElementById("time").style.color = "white";
+      document.getElementById("score").style.color = "white";
+      document.getElementById("best").style.color = "white";
+      instructionsImg.src = "../assets/images/instructions.png";
+    }
+  }
+
   // Game over check
   if (piggy.position.y < -window.innerHeight / 20) {
     gameOver = true;
 
-    // Save high scores if current scores are higher
+    // Highest score handling
     if (elapsedTime > highestTime) {
       highestTime = elapsedTime;
       localStorage.setItem("highestTime", highestTime.toString());
@@ -645,6 +668,9 @@ function restartGame() {
   elapsedTime = 0;
   jumpForce = JUMP_FORCE_NORMAL;
   maxPiggyY = 0;
+  backgroundIsWhite = false;
+  scene.background = new THREE.Color(0x0F0525);
+  lastBackgroundChangeTime = 0;
 
   if (superJumpTimeout) {
     clearTimeout(superJumpTimeout);
@@ -688,6 +714,8 @@ function startGame() {
   isGrounded = true;
   lastJumpTime = 0;
   maxPiggyY = 0;
+  lastBackgroundChangeTime = 0;
+  scene.background = new THREE.Color(0x0F0525);
 
   // Clear non-initial platforms
   platforms.forEach((platform) => {
