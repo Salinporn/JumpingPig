@@ -14,25 +14,24 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
 // Left side instructions
-const infoDiv = document.createElement('div');
-infoDiv.id = 'info';
-infoDiv.style.position = 'absolute';
-infoDiv.style.top = '10px';
-infoDiv.style.width = '300px';
-infoDiv.style.textAlign = 'left';
-infoDiv.style.color = 'white';
-infoDiv.style.fontFamily = 'Arial, sans-serif';
-infoDiv.style.pointerEvents = 'none';
-infoDiv.style.textShadow = '1px 1px 1px black';
-infoDiv.style.padding = '50px';
-const instructionsImg = document.createElement('img');
-instructionsImg.id = 'instructions';
-instructionsImg.src = '../assets/images/instructions.png';
-instructionsImg.alt = 'Instructions';
+const infoDiv = document.createElement("div");
+infoDiv.id = "info";
+infoDiv.style.position = "absolute";
+infoDiv.style.top = "10px";
+infoDiv.style.width = "300px";
+infoDiv.style.textAlign = "left";
+infoDiv.style.color = "white";
+infoDiv.style.fontFamily = "Arial, sans-serif";
+infoDiv.style.pointerEvents = "none";
+infoDiv.style.textShadow = "1px 1px 1px black";
+infoDiv.style.padding = "50px";
+const instructionsImg = document.createElement("img");
+instructionsImg.id = "instructions";
+instructionsImg.src = "../assets/images/instructions.png";
+instructionsImg.alt = "Instructions";
 instructionsImg.width = 400;
 infoDiv.appendChild(instructionsImg);
 document.body.appendChild(infoDiv);
-
 
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
 scene.add(ambientLight);
@@ -79,13 +78,17 @@ const JUMP_FORCE_SUPER = 0.6;
 let jumpForce = JUMP_FORCE_NORMAL;
 let superJumpTimeout = null;
 
-let hasSeenSuperJumpTutorial = false;
-let hasSeenMovingPlatformTutorial = false;
+let hasSeenSuperJumpTutorial =
+  localStorage.getItem("hasSeenSuperJumpTutorial") === "true";
+let hasSeenMovingPlatformTutorial =
+  localStorage.getItem("hasSeenMovingPlatformTutorial") === "true";
 let gamePaused = false;
 
 let piggy = null;
 let piggyHalfHeight = 0.5;
 let piggyHalfWidth = 0.5;
+
+let maxPiggyY = 0;
 
 const objLoader = new OBJLoader();
 objLoader.load(
@@ -116,17 +119,17 @@ objLoader.load(
     piggy.position.set(0, 0, 0);
     piggy.scale.set(1.5, 1.5, 1.5);
     scene.add(piggy);
-    
+
     objLoader.load(
       "assets/models/Star.obj",
       (object) => {
         star = object;
-        
+
         object.traverse((child) => {
           if (child.isMesh) {
             child.material = new THREE.MeshStandardMaterial({
-              color: 0xFFFF00,
-              emissive: 0xFFFF00,
+              color: 0xffff00,
+              emissive: 0xffff00,
               emissiveIntensity: 0.5,
               side: THREE.DoubleSide,
             });
@@ -134,9 +137,9 @@ objLoader.load(
             child.receiveShadow = true;
           }
         });
-        
+
         star.scale.set(1.0, 1.0, 1.0);
-        
+
         startGame();
       },
       undefined,
@@ -188,7 +191,7 @@ window.addEventListener("keyup", (event) => {
 function startCountdown() {
   countdownActive = true;
   countdownValue = 3;
-  
+
   const countdownOverlay = document.createElement("div");
   countdownOverlay.style.position = "fixed";
   countdownOverlay.style.top = "0";
@@ -202,21 +205,21 @@ function startCountdown() {
   countdownOverlay.style.alignItems = "center";
   countdownOverlay.style.zIndex = "999";
   countdownOverlay.style.fontFamily = "Arial, sans-serif";
-  
+
   const countdownText = document.createElement("div");
   countdownText.textContent = countdownValue.toString();
   countdownText.style.fontSize = "120px";
   countdownText.style.fontWeight = "bold";
   countdownText.style.color = "#ea3d8c";
   countdownText.style.textShadow = "0 0 10px rgba(255, 255, 255, 0.5)";
-  
+
   countdownOverlay.appendChild(countdownText);
   document.body.appendChild(countdownOverlay);
-  
+
   const countdownInterval = setInterval(() => {
     countdownValue--;
     countdownText.textContent = countdownValue.toString();
-    
+
     if (countdownValue <= 0) {
       clearInterval(countdownInterval);
       document.body.removeChild(countdownOverlay);
@@ -230,7 +233,7 @@ function startCountdown() {
 // Instruction overlay
 function showInstructionOverlay(type) {
   gamePaused = true;
-  
+
   const overlay = document.createElement("div");
   overlay.className = "tutorial-overlay";
   overlay.style.position = "fixed";
@@ -247,30 +250,31 @@ function showInstructionOverlay(type) {
   overlay.style.zIndex = "1000";
   overlay.style.fontFamily = "Arial, sans-serif";
   overlay.style.textAlign = "center";
-  
+
   let title, description;
-  
+
   if (type === "superJump") {
     title = "Super Jump Power-Up!";
     description = "Collect the yellow star to jump higher for 10 seconds!";
   } else if (type === "movingPlatform") {
     title = "Moving Platform!";
-    description = "These platforms move side to side! Time your jumps carefully.";
+    description =
+      "These platforms move side to side! Time your jumps carefully.";
   }
-  
+
   const keyInstruction = document.createElement("p");
   keyInstruction.textContent = "Click Continue to resume";
   keyInstruction.style.fontSize = "14px";
   keyInstruction.style.color = "#cccccc";
   keyInstruction.style.marginTop = "20px";
-  
+
   const titleElement = document.createElement("h2");
   titleElement.textContent = title;
   titleElement.style.fontSize = "28px";
   titleElement.style.marginBottom = "10px";
   titleElement.style.color = "#ea3d8c";
   overlay.appendChild(titleElement);
-  
+
   const mediaContainer = document.createElement("div");
   mediaContainer.style.margin = "15px 0";
   mediaContainer.style.width = "300px";
@@ -292,15 +296,15 @@ function showInstructionOverlay(type) {
     video.controls = false;
     video.style.maxWidth = "100%";
     video.style.maxHeight = "100%";
-    video.addEventListener('click', function(e) {
+    video.addEventListener("click", function (e) {
       e.preventDefault();
       return false;
     });
     mediaContainer.appendChild(video);
   }
-  
+
   overlay.appendChild(mediaContainer);
-  
+
   const descriptionElement = document.createElement("p");
   descriptionElement.textContent = description;
   descriptionElement.style.fontSize = "18px";
@@ -308,7 +312,7 @@ function showInstructionOverlay(type) {
   descriptionElement.style.maxWidth = "500px";
   overlay.appendChild(descriptionElement);
   overlay.appendChild(keyInstruction);
-  
+
   const continueButton = document.createElement("button");
   continueButton.className = "tutorial-continue-button";
   continueButton.textContent = "Continue";
@@ -322,20 +326,20 @@ function showInstructionOverlay(type) {
   continueButton.style.borderRadius = "8px";
   continueButton.style.boxShadow = "0 5px 15px rgba(234, 61, 140, 0.3)";
   continueButton.style.transition = "all 0.3s ease";
-  
+
   continueButton.addEventListener("mouseover", () => {
     continueButton.style.backgroundColor = "#f07ab3";
   });
-  
+
   continueButton.addEventListener("mouseout", () => {
     continueButton.style.backgroundColor = "#ea3d8c";
   });
-  
+
   continueButton.addEventListener("click", () => {
     document.body.removeChild(overlay);
     startCountdown();
   });
-  
+
   overlay.appendChild(continueButton);
   document.body.appendChild(overlay);
 }
@@ -343,23 +347,24 @@ function showInstructionOverlay(type) {
 // Animation loop
 function animate() {
   if (gameOver || !piggy || gamePaused || countdownActive) return;
-  
+
   requestAnimationFrame(animate);
-  
+
   velocity.add(gravity);
   piggy.position.add(velocity);
-  
+
   // Update platform speed
   currentPlatformSpeed = Math.min(0.05 + score * 0.003, MAX_PLATFORM_SPEED);
   dynamicJumpCooldown = Math.max(500 - score * 15, MIN_JUMP_COOLDOWN);
-  
+
   // Platform spawning
   if (hasJumped) {
     platformSpawnTimer++;
     elapsedTime = startTime !== null ? (Date.now() - startTime) / 1000 : 0;
 
     // Update score - base on time plus bonus points for height
-    const heightScore = Math.max(0, Math.floor(piggy.position.y)) * 2;
+    maxPiggyY = Math.max(maxPiggyY, piggy.position.y);
+    const heightScore = Math.max(0, Math.floor(maxPiggyY)) * 2;
     score = Math.floor(elapsedTime) + heightScore;
 
     const dynamicSpawnInterval = 100 * (0.05 / currentPlatformSpeed);
@@ -376,10 +381,11 @@ function animate() {
         newPlatform.speed = 0.01;
         newPlatform.initialX = newPlatform.position.x;
         newPlatform.movingRange = 10;
-        
+
         // Check if it's the first time seeing a moving platform
         if (!hasSeenMovingPlatformTutorial && elapsedTime >= 10) {
           hasSeenMovingPlatformTutorial = true;
+          localStorage.setItem("hasSeenMovingPlatformTutorial", "true");
           setTimeout(() => {
             showInstructionOverlay("movingPlatform");
           }, 500);
@@ -388,7 +394,11 @@ function animate() {
 
       if (!newPlatform.isMoving && Math.random() < 0.03 && star) {
         const powerUp = star.clone();
-        powerUp.position.set(newPlatform.position.x, newPlatform.position.y + 1.0, 0);
+        powerUp.position.set(
+          newPlatform.position.x,
+          newPlatform.position.y + 1.0,
+          0
+        );
         scene.add(powerUp);
         powerUps.push(powerUp);
       }
@@ -438,8 +448,7 @@ function animate() {
   if (elapsedTime >= 10) {
     platforms.forEach((platform) => {
       if (platform.isMoving) {
-        const nextX =
-          platform.position.x + platform.direction * platform.speed;
+        const nextX = platform.position.x + platform.direction * platform.speed;
 
         if (
           nextX > platform.initialX + platform.movingRange ||
@@ -458,10 +467,10 @@ function animate() {
   for (let i = powerUps.length - 1; i >= 0; i--) {
     const powerUp = powerUps[i];
     powerUp.position.y -= currentPlatformSpeed;
-    
+
     // Rotate the star powerup to create a floating effect
     powerUp.rotation.y += 0.02;
-    
+
     // Remove off-screen power-ups
     if (powerUp.position.y < -20) {
       scene.remove(powerUp);
@@ -473,13 +482,14 @@ function animate() {
     const dx = piggy.position.x - powerUp.position.x;
     const dy = piggy.position.y - powerUp.position.y;
     const distanceSq = dx * dx + dy * dy;
-    
+
     // If the player is getting close to their first power-up, show the tutorial
     const closeToFirstPowerUp = distanceSq < (piggyHalfWidth + 1.5) ** 2;
     if (!hasSeenSuperJumpTutorial && closeToFirstPowerUp) {
       hasSeenSuperJumpTutorial = true;
+      localStorage.setItem("hasSeenSuperJumpTutorial", "true");
       showInstructionOverlay("superJump");
-      break; // Break the loop to prevent further processing until the tutorial is closed
+      break;
     }
 
     // Actual collision detection
@@ -559,14 +569,18 @@ function animate() {
           <span>Score:</span> <span style="font-weight: bold;">${score}</span>
         </div>
         <div style="display: flex; justify-content: space-between;">
-          <span>Time Survived:</span> <span style="font-weight: bold;">${elapsedTime.toFixed(2)} s</span>
+          <span>Time Survived:</span> <span style="font-weight: bold;">${elapsedTime.toFixed(
+            2
+          )} s</span>
         </div>
         <hr style="border: 0; height: 1px; background: #ccc; margin: 10px 0;">
         <div style="display: flex; justify-content: space-between;">
           <span>Highest Score:</span> <span style="font-weight: bold;">${highestScore}</span>
         </div>
         <div style="display: flex; justify-content: space-between;">
-          <span>Best Time:</span> <span style="font-weight: bold;">${highestTime.toFixed(2)} s</span>
+          <span>Best Time:</span> <span style="font-weight: bold;">${highestTime.toFixed(
+            2
+          )} s</span>
         </div>
       </div>
     `;
@@ -630,9 +644,8 @@ function restartGame() {
   lastJumpTime = 0;
   elapsedTime = 0;
   jumpForce = JUMP_FORCE_NORMAL;
-  hasSeenSuperJumpTutorial = false;
-  hasSeenMovingPlatformTutorial = false;
-  
+  maxPiggyY = 0;
+
   if (superJumpTimeout) {
     clearTimeout(superJumpTimeout);
     superJumpTimeout = null;
@@ -674,8 +687,7 @@ function startGame() {
   hasJumped = false;
   isGrounded = true;
   lastJumpTime = 0;
-  hasSeenSuperJumpTutorial = false;
-  hasSeenMovingPlatformTutorial = false;
+  maxPiggyY = 0;
 
   // Clear non-initial platforms
   platforms.forEach((platform) => {
