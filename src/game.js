@@ -1,7 +1,7 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.119/build/three.module.js";
 import { OBJLoader } from "https://cdn.jsdelivr.net/npm/three@0.119/examples/jsm/loaders/OBJLoader.js";
 
-// Scene setup
+// Scene setup and camera
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(
   75,
@@ -12,6 +12,13 @@ const camera = new THREE.PerspectiveCamera(
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
+camera.position.z = 20;
+
+// Audio
+let audioListener;
+let jumpSound;
+audioListener = new THREE.AudioListener();
+camera.add(audioListener);
 
 // Left side instructions
 const infoDiv = document.createElement("div");
@@ -38,7 +45,7 @@ scene.add(ambientLight);
 const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
 directionalLight.position.set(0, 5, 10);
 scene.add(directionalLight);
-scene.background = new THREE.Color(0x0F0525);
+scene.background = new THREE.Color(0x0f0525);
 let backgroundIsWhite = false;
 let lastBackgroundChangeTime = 0;
 
@@ -116,6 +123,13 @@ objLoader.load(
       }
     });
 
+    const soundLoader = new THREE.AudioLoader();
+    soundLoader.load("assets/audios/jump.mp3", (buffer) => {
+      jumpSound = new THREE.Audio(audioListener);
+      jumpSound.setBuffer(buffer);
+      jumpSound.setVolume(0.3);
+    });
+
     if (firstMesh) {
       firstMesh.geometry.computeBoundingBox();
       const bb = firstMesh.geometry.boundingBox;
@@ -183,8 +197,6 @@ if (localStorage.getItem("highestScore")) {
 if (localStorage.getItem("highestTime")) {
   highestTime = parseFloat(localStorage.getItem("highestTime"));
 }
-
-camera.position.z = 20;
 
 // Keyboard input
 const keys = {};
@@ -520,15 +532,19 @@ function animate() {
     isGrounded = false;
     hasJumped = true;
     lastJumpTime = currentTime;
+
+    if (jumpSound) {
+      jumpSound.play();
+    }
   }
 
   // dynamic background color change
   if (elapsedTime - lastBackgroundChangeTime > 60) {
     lastBackgroundChangeTime = elapsedTime;
     backgroundIsWhite = !backgroundIsWhite;
-    
+
     if (backgroundIsWhite) {
-      scene.background = new THREE.Color(0x87CEEB); // Sky blue for day
+      scene.background = new THREE.Color(0x87ceeb); // Sky blue for day
       infoDiv.style.color = "black";
       infoDiv.style.textShadow = "1px 1px 1px rgba(255, 255, 255, 0.7)";
       document.getElementById("time").style.color = "black";
@@ -536,7 +552,7 @@ function animate() {
       document.getElementById("best").style.color = "black";
       instructionsImg.src = "../assets/images/instructions2.png";
     } else {
-      scene.background = new THREE.Color(0x0F0525); // Dark blue for night
+      scene.background = new THREE.Color(0x0f0525); // Dark blue for night
       infoDiv.style.color = "white";
       infoDiv.style.textShadow = "1px 1px 1px rgba(0, 0, 0, 0.7)";
       document.getElementById("time").style.color = "white";
@@ -673,7 +689,7 @@ function restartGame() {
   jumpForce = JUMP_FORCE_NORMAL;
   maxPiggyY = 0;
   backgroundIsWhite = false;
-  scene.background = new THREE.Color(0x0F0525);
+  scene.background = new THREE.Color(0x0f0525);
   lastBackgroundChangeTime = 0;
   instructionsImg.src = "../assets/images/instructions.png";
 
@@ -720,7 +736,7 @@ function startGame() {
   lastJumpTime = 0;
   maxPiggyY = 0;
   lastBackgroundChangeTime = 0;
-  scene.background = new THREE.Color(0x0F0525);
+  scene.background = new THREE.Color(0x0f0525);
   instructionsImg.src = "../assets/images/instructions.png";
 
   // Clear non-initial platforms
