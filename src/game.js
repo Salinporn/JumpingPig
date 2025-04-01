@@ -87,8 +87,11 @@ bgmSlider.addEventListener("input", () => {
     bgmVolume = bgmSlider.value / 100;
     if (bgMusic) bgMusic.setVolume(bgmVolume);
     if (bgGameOver) bgGameOver.setVolume(bgmVolume);
+  } else {
+    bgmSlider.value = bgmVolume * 100;
   }
 });
+
 bgmContainer.appendChild(bgmSlider);
 
 soundSettingsDiv.appendChild(bgmContainer);
@@ -117,11 +120,39 @@ sfxSlider.addEventListener("input", () => {
     if (jumpSound) jumpSound.setVolume(sfxVolume-0.2);
     if (starSound) starSound.setVolume(sfxVolume);
     if (clickSound) clickSound.setVolume(sfxVolume);
+  } else {
+    sfxSlider.value = sfxVolume * 100;
   }
 });
 sfxContainer.appendChild(sfxSlider);
 
 soundSettingsDiv.appendChild(sfxContainer);
+
+function updateSoundUIState() {
+  if (isMuted) {
+    // Disabled state - gray out sliders and labels
+    bgmSlider.style.opacity = "0.5";
+    sfxSlider.style.opacity = "0.5";
+    bgmLabel.style.opacity = "0.5";
+    sfxLabel.style.opacity = "0.5";
+    
+    // Add disabled cursor for better UX
+    bgmSlider.style.cursor = "not-allowed";
+    sfxSlider.style.cursor = "not-allowed";
+  } else {
+    // Enabled state - full opacity
+    bgmSlider.style.opacity = "1";
+    sfxSlider.style.opacity = "1";
+    bgmLabel.style.opacity = "1";
+    sfxLabel.style.opacity = "1";
+    
+    // Restore normal cursor
+    bgmSlider.style.cursor = "pointer";
+    sfxSlider.style.cursor = "pointer";
+  }
+}
+
+updateSoundUIState();
 
 // Mute button
 const muteContainer = document.createElement("div");
@@ -173,6 +204,7 @@ muteButton.addEventListener("click", () => {
     if (starSound) starSound.setVolume(sfxVolume);
     if (clickSound) clickSound.setVolume(sfxVolume);
   }
+  updateSoundUIState();
   muteButton.blur();
 });
 
@@ -256,7 +288,7 @@ const soundLoader = new THREE.AudioLoader();
 soundLoader.load("assets/audios/jump.mp3", (buffer) => {
   jumpSound = new THREE.Audio(audioListener);
   jumpSound.setBuffer(buffer);
-  jumpSound.setVolume(sfxVolume-0.25);
+  jumpSound.setVolume(sfxVolume-0.2);
 });
 
 soundLoader.load("assets/audios/bgMusic.wav", (buffer) => {
