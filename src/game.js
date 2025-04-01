@@ -173,6 +173,7 @@ muteButton.addEventListener("click", () => {
     if (starSound) starSound.setVolume(sfxVolume);
     if (clickSound) clickSound.setVolume(sfxVolume);
   }
+  muteButton.blur();
 });
 
 muteContainer.appendChild(muteButton);
@@ -250,6 +251,43 @@ let piggyHalfWidth = 0.5;
 
 let maxPiggyY = 0;
 
+// Load audio files
+const soundLoader = new THREE.AudioLoader();
+soundLoader.load("assets/audios/jump.mp3", (buffer) => {
+  jumpSound = new THREE.Audio(audioListener);
+  jumpSound.setBuffer(buffer);
+  jumpSound.setVolume(sfxVolume-0.25);
+});
+
+soundLoader.load("assets/audios/bgMusic.wav", (buffer) => {
+  bgMusic = new THREE.Audio(audioListener);
+  bgMusic.setBuffer(buffer);
+  bgMusic.setVolume(bgmVolume);
+  bgMusic.setLoop(true);
+  if (!isMuted) {
+    bgMusic.play();
+  }
+});
+
+soundLoader.load("assets/audios/star.wav", (buffer) => {
+  starSound = new THREE.Audio(audioListener);
+  starSound.setBuffer(buffer);
+  starSound.setVolume(sfxVolume);
+});
+
+soundLoader.load("assets/audios/bgGameOver.mp3", (buffer) => {
+  bgGameOver = new THREE.Audio(audioListener);
+  bgGameOver.setBuffer(buffer);
+  bgGameOver.setVolume(bgmVolume);
+  bgGameOver.setLoop(true);
+});
+
+soundLoader.load("assets/audios/click.wav", (buffer) => {
+  clickSound = new THREE.Audio(audioListener);
+  clickSound.setBuffer(buffer);
+  clickSound.setVolume(sfxVolume);
+});
+
 // Load Objects-Models
 const objLoader = new OBJLoader();
 objLoader.load(
@@ -268,40 +306,6 @@ objLoader.load(
         child.castShadow = true;
         child.receiveShadow = true;
       }
-    });
-
-    // Load audio files
-    const soundLoader = new THREE.AudioLoader();
-    soundLoader.load("assets/audios/jump.mp3", (buffer) => {
-      jumpSound = new THREE.Audio(audioListener);
-      jumpSound.setBuffer(buffer);
-      jumpSound.setVolume(sfxVolume-0.2);
-    });
-    
-    soundLoader.load("assets/audios/bgMusic.wav", (buffer) => {
-      bgMusic = new THREE.Audio(audioListener);
-      bgMusic.setBuffer(buffer);
-      bgMusic.setVolume(bgmVolume);
-      bgMusic.setLoop(true);
-    });
-    
-    soundLoader.load("assets/audios/star.wav", (buffer) => {
-      starSound = new THREE.Audio(audioListener);
-      starSound.setBuffer(buffer);
-      starSound.setVolume(sfxVolume);
-    });
-    
-    soundLoader.load("assets/audios/bgGameOver.mp3", (buffer) => {
-      bgGameOver = new THREE.Audio(audioListener);
-      bgGameOver.setBuffer(buffer);
-      bgGameOver.setVolume(bgmVolume);
-      bgGameOver.setLoop(true);
-    });
-
-    soundLoader.load("assets/audios/click.wav", (buffer) => {
-      clickSound = new THREE.Audio(audioListener);
-      clickSound.setBuffer(buffer);
-      clickSound.setVolume(sfxVolume);
     });
 
     if (firstMesh) {
