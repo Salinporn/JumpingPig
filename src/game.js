@@ -843,17 +843,11 @@ function animate() {
 
       <div style="display: flex; flex-direction: column; gap: 10px; font-size: 1.2rem;">
         <div style="display: flex; justify-content: space-between;">
-          <span>Score:</span> <span style="font-weight: bold;">${score}</span>
-        </div>
-        <div style="display: flex; justify-content: space-between;">
           <span>Time Survived:</span> <span style="font-weight: bold;">${elapsedTime.toFixed(
             2
           )} s</span>
         </div>
         <hr style="border: 0; height: 1px; background: #ccc; margin: 10px 0;">
-        <div style="display: flex; justify-content: space-between;">
-          <span>Highest Score:</span> <span style="font-weight: bold;">${highestScore}</span>
-        </div>
         <div style="display: flex; justify-content: space-between;">
           <span>Best Time:</span> <span style="font-weight: bold;">${highestTime.toFixed(
             2
