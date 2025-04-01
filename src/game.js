@@ -55,7 +55,7 @@ soundSettingsDiv.style.backgroundColor = "rgba(0, 0, 0, 0.5)";
 soundSettingsDiv.style.borderRadius = "8px";
 soundSettingsDiv.style.color = "white";
 soundSettingsDiv.style.fontFamily = "Arial, sans-serif";
-soundSettingsDiv.style.width = "300px";
+soundSettingsDiv.style.width = "380px";
 soundSettingsDiv.style.pointerEvents = "auto";
 
 const settingsTitle = document.createElement("h3");
@@ -65,6 +65,7 @@ settingsTitle.style.fontSize = "16px";
 settingsTitle.style.fontWeight = "bold";
 soundSettingsDiv.appendChild(settingsTitle);
 
+// BGM volume control
 const bgmContainer = document.createElement("div");
 bgmContainer.style.display = "flex";
 bgmContainer.style.alignItems = "center";
@@ -90,6 +91,7 @@ bgmSlider.addEventListener("input", () => {
   } else {
     bgmSlider.value = bgmVolume * 100;
   }
+  bgmSlider.blur();
 });
 
 bgmContainer.appendChild(bgmSlider);
@@ -123,6 +125,7 @@ sfxSlider.addEventListener("input", () => {
   } else {
     sfxSlider.value = sfxVolume * 100;
   }
+  sfxSlider.blur();
 });
 sfxContainer.appendChild(sfxSlider);
 
@@ -130,23 +133,19 @@ soundSettingsDiv.appendChild(sfxContainer);
 
 function updateSoundUIState() {
   if (isMuted) {
-    // Disabled state - gray out sliders and labels
     bgmSlider.style.opacity = "0.5";
     sfxSlider.style.opacity = "0.5";
     bgmLabel.style.opacity = "0.5";
     sfxLabel.style.opacity = "0.5";
     
-    // Add disabled cursor for better UX
     bgmSlider.style.cursor = "not-allowed";
     sfxSlider.style.cursor = "not-allowed";
   } else {
-    // Enabled state - full opacity
     bgmSlider.style.opacity = "1";
     sfxSlider.style.opacity = "1";
     bgmLabel.style.opacity = "1";
     sfxLabel.style.opacity = "1";
     
-    // Restore normal cursor
     bgmSlider.style.cursor = "pointer";
     sfxSlider.style.cursor = "pointer";
   }
@@ -168,6 +167,7 @@ muteButton.style.border = "none";
 muteButton.style.borderRadius = "4px";
 muteButton.style.cursor = "pointer";
 muteButton.style.fontSize = "14px";
+muteButton.style.minWidth = "80px";
 muteButton.style.transition = "background-color 0.2s";
 
 muteButton.addEventListener("mouseover", () => {
@@ -384,8 +384,6 @@ objLoader.load(
 // Other Game variables
 let velocity = new THREE.Vector3(0, 0, 0);
 const gravity = new THREE.Vector3(0, -0.02, 0);
-let score = 0;
-let highestScore = 0;
 let elapsedTime = 0;
 let gameOver = false;
 let startTime = null;
@@ -400,10 +398,7 @@ let highestTime = 0;
 let countdownActive = false;
 let countdownValue = 3;
 
-// Load highest score
-if (localStorage.getItem("highestScore")) {
-  highestScore = parseInt(localStorage.getItem("highestScore"));
-}
+// Load highest time
 if (localStorage.getItem("highestTime")) {
   highestTime = parseFloat(localStorage.getItem("highestTime"));
 }
@@ -590,19 +585,14 @@ function animate() {
   velocity.add(gravity);
   piggy.position.add(velocity);
 
-  // Update platform speed
-  currentPlatformSpeed = Math.min(0.05 + score * 0.003, MAX_PLATFORM_SPEED);
-  dynamicJumpCooldown = Math.max(500 - score * 15, MIN_JUMP_COOLDOWN);
+  // Platform speed and jump cooldown
+  currentPlatformSpeed = Math.min(0.05 + elapsedTime * 0.0005, MAX_PLATFORM_SPEED);
+  dynamicJumpCooldown = Math.max(500 - elapsedTime * 2.5, MIN_JUMP_COOLDOWN);
 
   // Platform spawning
   if (hasJumped) {
     platformSpawnTimer++;
     elapsedTime = startTime !== null ? (Date.now() - startTime) / 1000 : 0;
-
-    // Update score
-    maxPiggyY = Math.max(maxPiggyY, piggy.position.y);
-    const heightScore = Math.max(0, Math.floor(maxPiggyY)) * 2;
-    score = Math.floor(elapsedTime) + heightScore;
 
     const dynamicSpawnInterval = 100 * (0.05 / currentPlatformSpeed);
     if (platformSpawnTimer > dynamicSpawnInterval) {
@@ -771,16 +761,12 @@ function animate() {
       infoDiv.style.color = "black";
       infoDiv.style.textShadow = "1px 1px 1px rgba(255, 255, 255, 0.7)";
       document.getElementById("time").style.color = "black";
-      document.getElementById("score").style.color = "black";
-      document.getElementById("best").style.color = "black";
       instructionsImg.src = "../assets/images/instructions2.png";
     } else {
       scene.background = new THREE.Color(0x0f0525); // Dark blue for night
       infoDiv.style.color = "white";
       infoDiv.style.textShadow = "1px 1px 1px rgba(0, 0, 0, 0.7)";
       document.getElementById("time").style.color = "white";
-      document.getElementById("score").style.color = "white";
-      document.getElementById("best").style.color = "white";
       instructionsImg.src = "../assets/images/instructions.png";
     }
   }
@@ -797,15 +783,10 @@ function animate() {
       bgGameOver.play();
     }
 
-    // Highest score handling
+    // Highest time handling
     if (elapsedTime > highestTime) {
       highestTime = elapsedTime;
       localStorage.setItem("highestTime", highestTime.toString());
-    }
-
-    if (score > highestScore) {
-      highestScore = score;
-      localStorage.setItem("highestScore", highestScore.toString());
     }
 
     const overlay = document.createElement("div");
@@ -839,9 +820,6 @@ function animate() {
     message.innerHTML = `
 
       <div style="display: flex; flex-direction: column; gap: 10px; font-size: 1.2rem;">
-        <div style="display: flex; justify-content: space-between;">
-          <span>Score:</span> <span style="font-weight: bold;">${score}</span>
-        </div>
         <div style="display: flex; justify-content: space-between;">
           <span>Time Survived:</span> <span style="font-weight: bold;">${elapsedTime.toFixed(
             2
@@ -897,11 +875,8 @@ function animate() {
     document.body.appendChild(overlay);
   }
 
-  document.getElementById("time").textContent = `Time: ${elapsedTime.toFixed(
-    2
-  )}`;
-  document.getElementById("score").textContent = `Score: ${score}`;
-  document.getElementById("best").textContent = `Best: ${highestScore}`;
+  document.getElementById("time").textContent = `Time: ${elapsedTime.toFixed(2)}`;
+  document.getElementById("best").textContent = `Best: ${highestTime.toFixed(2)}`;
 
   renderer.render(scene, camera);
 }
@@ -917,7 +892,6 @@ function activateSuperJump() {
 // Restart game
 function restartGame() {
   gameOver = false;
-  score = 0;
   currentPlatformSpeed = 0.05;
   piggy.position.set(0, -1.25, 0);
   velocity.set(0, 0, 0);
@@ -970,7 +944,6 @@ function restartGame() {
 // Start game
 function startGame() {
   gameOver = false;
-  score = 0;
   currentPlatformSpeed = 0.05;
   piggy.position.set(0, -1.25, 0);
   velocity.set(0, 0, 0);
