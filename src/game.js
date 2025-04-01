@@ -284,7 +284,6 @@ let piggy = null;
 let piggyHalfHeight = 0.5;
 let piggyHalfWidth = 0.5;
 
-let maxPiggyY = 0;
 
 // Load audio files
 const soundLoader = new THREE.AudioLoader();
@@ -388,7 +387,6 @@ objLoader.load(
 let velocity = new THREE.Vector3(0, 0, 0);
 const gravity = new THREE.Vector3(0, -0.02, 0);
 let score = 0;
-let highestScore = 0;
 let elapsedTime = 0;
 let gameOver = false;
 let startTime = null;
@@ -403,10 +401,7 @@ let highestTime = 0;
 let countdownActive = false;
 let countdownValue = 3;
 
-// Load highest score
-if (localStorage.getItem("highestScore")) {
-  highestScore = parseInt(localStorage.getItem("highestScore"));
-}
+// Load longest time record
 if (localStorage.getItem("highestTime")) {
   highestTime = parseFloat(localStorage.getItem("highestTime"));
 }
@@ -602,11 +597,6 @@ function animate() {
     platformSpawnTimer++;
     elapsedTime = startTime !== null ? (Date.now() - startTime) / 1000 : 0;
 
-    // Update score
-    maxPiggyY = Math.max(maxPiggyY, piggy.position.y);
-    const heightScore = Math.max(0, Math.floor(maxPiggyY)) * 2;
-    score = Math.floor(elapsedTime) + heightScore;
-
     const dynamicSpawnInterval = 100 * (0.05 / currentPlatformSpeed);
     if (platformSpawnTimer > dynamicSpawnInterval) {
       platformSpawnTimer = 0;
@@ -774,7 +764,6 @@ function animate() {
       infoDiv.style.color = "black";
       infoDiv.style.textShadow = "1px 1px 1px rgba(255, 255, 255, 0.7)";
       document.getElementById("time").style.color = "black";
-      document.getElementById("score").style.color = "black";
       document.getElementById("best").style.color = "black";
       instructionsImg.src = "../assets/images/instructions2.png";
     } else {
@@ -782,7 +771,6 @@ function animate() {
       infoDiv.style.color = "white";
       infoDiv.style.textShadow = "1px 1px 1px rgba(0, 0, 0, 0.7)";
       document.getElementById("time").style.color = "white";
-      document.getElementById("score").style.color = "white";
       document.getElementById("best").style.color = "white";
       instructionsImg.src = "../assets/images/instructions.png";
     }
@@ -804,11 +792,6 @@ function animate() {
     if (elapsedTime > highestTime) {
       highestTime = elapsedTime;
       localStorage.setItem("highestTime", highestTime.toString());
-    }
-
-    if (score > highestScore) {
-      highestScore = score;
-      localStorage.setItem("highestScore", highestScore.toString());
     }
 
     const overlay = document.createElement("div");
@@ -896,9 +879,11 @@ function animate() {
 
   document.getElementById("time").textContent = `Time: ${elapsedTime.toFixed(
     2
-  )}`;
-  document.getElementById("score").textContent = `Score: ${score}`;
-  document.getElementById("best").textContent = `Best: ${highestScore}`;
+  )} s`;
+
+  document.getElementById("best").textContent = `Best: ${highestTime.toFixed(
+    2
+  )} s`;
 
   renderer.render(scene, camera);
 }
@@ -914,7 +899,6 @@ function activateSuperJump() {
 // Restart game
 function restartGame() {
   gameOver = false;
-  score = 0;
   currentPlatformSpeed = 0.05;
   piggy.position.set(0, -1.25, 0);
   velocity.set(0, 0, 0);
@@ -924,7 +908,6 @@ function restartGame() {
   lastJumpTime = 0;
   elapsedTime = 0;
   jumpForce = JUMP_FORCE_NORMAL;
-  maxPiggyY = 0;
   backgroundIsWhite = false;
   scene.background = new THREE.Color(0x0f0525);
   lastBackgroundChangeTime = 0;
@@ -967,7 +950,6 @@ function restartGame() {
 // Start game
 function startGame() {
   gameOver = false;
-  score = 0;
   currentPlatformSpeed = 0.05;
   piggy.position.set(0, -1.25, 0);
   velocity.set(0, 0, 0);
@@ -975,7 +957,6 @@ function startGame() {
   hasJumped = false;
   isGrounded = true;
   lastJumpTime = 0;
-  maxPiggyY = 0;
   lastBackgroundChangeTime = 0;
   scene.background = new THREE.Color(0x0f0525);
   instructionsImg.src = "../assets/images/instructions.png";
