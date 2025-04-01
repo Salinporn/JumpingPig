@@ -55,7 +55,7 @@ soundSettingsDiv.style.backgroundColor = "rgba(0, 0, 0, 0.5)";
 soundSettingsDiv.style.borderRadius = "8px";
 soundSettingsDiv.style.color = "white";
 soundSettingsDiv.style.fontFamily = "Arial, sans-serif";
-soundSettingsDiv.style.width = "300px";
+soundSettingsDiv.style.width = "380px";
 soundSettingsDiv.style.pointerEvents = "auto";
 
 const settingsTitle = document.createElement("h3");
@@ -65,6 +65,7 @@ settingsTitle.style.fontSize = "16px";
 settingsTitle.style.fontWeight = "bold";
 soundSettingsDiv.appendChild(settingsTitle);
 
+// BGM volume control
 const bgmContainer = document.createElement("div");
 bgmContainer.style.display = "flex";
 bgmContainer.style.alignItems = "center";
@@ -90,6 +91,7 @@ bgmSlider.addEventListener("input", () => {
   } else {
     bgmSlider.value = bgmVolume * 100;
   }
+  bgmSlider.blur();
 });
 
 bgmContainer.appendChild(bgmSlider);
@@ -123,6 +125,7 @@ sfxSlider.addEventListener("input", () => {
   } else {
     sfxSlider.value = sfxVolume * 100;
   }
+  sfxSlider.blur();
 });
 sfxContainer.appendChild(sfxSlider);
 
