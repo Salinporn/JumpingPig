@@ -49,6 +49,12 @@ const GAME_CONSTANTS = {
     SPAWN_CHANCE: 0.03,
     Y_OFFSET: 1.0,
   },
+  SHIELD: {
+    SCALE: 0.3,
+    SPAWN_CHANCE: 0.03,
+    Y_OFFSET: 1.5,
+    DURATION: 15000,
+  },
   GRAVITY: -0.02,
   BACKGROUND: {
     CHANGE_INTERVAL: 60,
@@ -87,6 +93,7 @@ class GameState {
     this.currentPlatformSpeed = GAME_CONSTANTS.PLATFORM.SPEED.INITIAL;
     this.jumpForce = GAME_CONSTANTS.JUMP.NORMAL;
     this.dynamicJumpCooldown = GAME_CONSTANTS.JUMP.COOLDOWN.MAX;
+    this.pausedElapsedTime = 0;
   }
 }
 
@@ -97,6 +104,7 @@ class PiggyJumpGame {
     this.highestTime = parseFloat(localStorage.getItem("highestTime")) || 0;
     this.timeDisplay = document.getElementById("time");
     this.bestTimeDisplay = document.getElementById("best");
+    this.rainbowHue = 0;
 
     this.initialPlatformPositions = [
       { x: 0, y: -2 },
@@ -166,7 +174,13 @@ class PiggyJumpGame {
       GAME_CONSTANTS.PLATFORM.SIZE.HEIGHT,
       GAME_CONSTANTS.PLATFORM.SIZE.DEPTH
     );
-    const platformMaterial = new THREE.MeshBasicMaterial({ color: 0x808080 });
+
+    const platformMaterial = new THREE.MeshStandardMaterial({
+      color: 0x808080,
+      metalness: 0.3,
+      roughness: 0.7,
+      flatShading: false
+    });
 
     this.initialPlatformPositions.forEach((pos) => {
       const platform = new THREE.Mesh(platformGeometry, platformMaterial);
@@ -506,13 +520,11 @@ class PiggyJumpGame {
               GAME_CONSTANTS.STAR.SCALE,
               GAME_CONSTANTS.STAR.SCALE
             );
-
-            this.startGame();
           },
           undefined,
           (err) => console.error("Error loading star model:", err)
         );
-        
+
         // Load apple model
         objLoader.load(
           "assets/models/apple.obj",
@@ -530,12 +542,42 @@ class PiggyJumpGame {
                 child.receiveShadow = true;
               }
             });
-            
+
             this.appleModel.scale.set(0.01, 0.01, 0.01);
           },
           undefined,
           (err) => console.error("Error loading apple model:", err)
         );
+
+        // Load shield model
+        objLoader.load(
+          "assets/models/shield.obj",
+          (object) => {
+            this.shieldModel = object;
+            object.traverse((child) => {
+              if (child.isMesh) {
+                child.material = new THREE.MeshStandardMaterial({
+                  color: 0x0099ff,
+                  emissive: 0x0044aa,
+                  emissiveIntensity: 0.5,
+                  transparent: true,
+                  opacity: 0.8,
+                });
+                child.castShadow = true;
+                child.receiveShadow = true;
+              }
+            });
+            this.shieldModel.scale.set(
+              GAME_CONSTANTS.SHIELD.SCALE,
+              GAME_CONSTANTS.SHIELD.SCALE,
+              GAME_CONSTANTS.SHIELD.SCALE
+            );
+          },
+          undefined,
+          (err) => console.error("Error loading shield model:", err)
+        );
+
+        this.startGame();
       },
       undefined,
       (err) => console.error("Error loading piggy model:", err)
@@ -591,31 +633,34 @@ class PiggyJumpGame {
     this.handlePiggyMovement();
     this.checkGameOver();
     this.updateUI();
+    this.updatePiggyColor();
 
     this.renderer.render(this.scene, this.camera);
   }
 
   updateUI() {
-    this.timeDisplay.textContent = `Time: ${this.state.elapsedTime.toFixed(2)} s`;
+    this.timeDisplay.textContent = `Time: ${this.state.elapsedTime.toFixed(
+      2
+    )} s`;
     this.bestTimeDisplay.textContent = `Best: ${this.highestTime.toFixed(2)} s`;
   }
 
   updatePhysics() {
     this.velocity.add(this.gravity);
     this.piggy.position.add(this.velocity);
-  
+
     // Bullet push forces
     for (let i = this.bulletPushForces.length - 1; i >= 0; i--) {
       const force = this.bulletPushForces[i];
       this.velocity.x += force.direction * force.magnitude;
       force.magnitude *= GAME_CONSTANTS.BULLET.PUSH_DECAY;
       force.duration--;
-  
+
       if (force.duration <= 0 || force.magnitude < 0.001) {
         this.bulletPushForces.splice(i, 1);
       }
     }
-  
+
     this.velocity.x = THREE.MathUtils.clamp(
       this.velocity.x,
       -GAME_CONSTANTS.BULLET.PUSH_MAX_SPEED * 1.5,
@@ -668,6 +713,47 @@ class PiggyJumpGame {
       this.instructionsImg.src = isDay
         ? "../assets/images/instructions2.png"
         : "../assets/images/instructions.png";
+    }
+  }
+
+  updatePiggyColor() {
+    if (
+      this.state.isImmune &&
+      this.state.jumpForce === GAME_CONSTANTS.JUMP.SUPER
+    ) {
+      // Rainbow color for both shield and power up
+      this.rainbowHue = (this.rainbowHue + 2) % 360;
+      const rainbowColor = new THREE.Color().setHSL(
+        this.rainbowHue / 360,
+        1,
+        0.5
+      );
+      this.piggy.traverse((child) => {
+        if (child.isMesh) {
+          child.material.color.copy(rainbowColor);
+        }
+      });
+    } else if (this.state.isImmune) {
+      // Blue for shield
+      this.piggy.traverse((child) => {
+        if (child.isMesh) {
+          child.material.color.setHex(0xaad1e7);
+        }
+      });
+    } else if (this.state.jumpForce === GAME_CONSTANTS.JUMP.SUPER) {
+      // Yellow for super jump
+      this.piggy.traverse((child) => {
+        if (child.isMesh) {
+          child.material.color.setHex(0xffff9f);
+        }
+      });
+    } else {
+      // Default color
+      this.piggy.traverse((child) => {
+        if (child.isMesh) {
+          child.material.color.setHex(0xf4a1c8);
+        }
+      });
     }
   }
 
@@ -754,7 +840,13 @@ class PiggyJumpGame {
       GAME_CONSTANTS.PLATFORM.SIZE.HEIGHT,
       GAME_CONSTANTS.PLATFORM.SIZE.DEPTH
     );
-    const platformMaterial = new THREE.MeshBasicMaterial({ color: 0x808080 });
+    
+    const platformMaterial = new THREE.MeshStandardMaterial({
+      color: 0x808080,
+      metalness: 0.3,
+      roughness: 0.7,
+      flatShading: false
+    });
 
     const newPlatform = new THREE.Mesh(platformGeometry, platformMaterial);
     newPlatform.position.y = GAME_CONSTANTS.PLATFORM.SPAWN.HEIGHT;
@@ -787,12 +879,22 @@ class PiggyJumpGame {
       this.spawnPowerUp(newPlatform);
     }
 
+    // Spawn shield
+    if (
+      !newPlatform.isMoving &&
+      Math.random() < GAME_CONSTANTS.SHIELD.SPAWN_CHANCE &&
+      this.shieldModel
+    ) {
+      this.spawnShield(newPlatform);
+    }
+
     this.platforms.push(newPlatform);
     this.scene.add(newPlatform);
   }
 
   spawnPowerUp(platform) {
     const powerUp = this.star.clone();
+    powerUp.type = "star";
     powerUp.position.set(
       platform.position.x,
       platform.position.y + GAME_CONSTANTS.STAR.Y_OFFSET,
@@ -802,11 +904,30 @@ class PiggyJumpGame {
     this.powerUps.push(powerUp);
   }
 
+  spawnShield(platform) {
+    const shield = this.shieldModel.clone();
+    shield.type = "shield";
+    shield.position.set(
+      platform.position.x,
+      platform.position.y + GAME_CONSTANTS.SHIELD.Y_OFFSET,
+      0
+    );
+
+    shield.rotation.x = -Math.PI / 2;
+
+    this.scene.add(shield);
+    this.powerUps.push(shield);
+  }
+
   handlePowerUps() {
     for (let i = this.powerUps.length - 1; i >= 0; i--) {
       const powerUp = this.powerUps[i];
       powerUp.position.y -= this.state.currentPlatformSpeed;
-      powerUp.rotation.y += 0.02;
+      if (powerUp.type === "shield") {
+        powerUp.rotation.z += 0.02;
+      } else {
+        powerUp.rotation.y += 0.02;
+      }
 
       // Remove off-screen power-ups
       if (powerUp.position.y < -20) {
@@ -823,18 +944,48 @@ class PiggyJumpGame {
       // Super jump tutorial
       if (
         !localStorage.getItem("hasSeenSuperJumpTutorial") &&
-        distanceSq < (this.piggyHalfWidth + 1.5) ** 2
+        distanceSq < (this.piggyHalfWidth + 1.5) ** 2 &&
+        powerUp.type === "star"
       ) {
         localStorage.setItem("hasSeenSuperJumpTutorial", "true");
         this.showInstructionOverlay("superJump");
         break;
       }
 
-      // Collect power-up
+      if (
+        !localStorage.getItem("hasSeenBulletShieldTutorial") &&
+        powerUp.type === "shield"
+      ) {
+        this.state.hasSeenBulletShieldTutorial = true;
+        localStorage.setItem("hasSeenBulletShieldTutorial", "true");
+        this.showInstructionOverlay("shield");
+        return;
+      }
+
+      // Collect power-up/shield
       if (distanceSq < (this.piggyHalfWidth + 0.5) ** 2) {
-        this.collectPowerUp(powerUp, i);
+        if (powerUp.type === "star") {
+          this.collectPowerUp(powerUp, i);
+        } else if (powerUp.type === "shield") {
+          this.collectShield(powerUp, i);
+        }
       }
     }
+  }
+  collectShield(shield, index) {
+    this.scene.remove(shield);
+    this.powerUps.splice(index, 1);
+    this.playSound("star");
+    this.activateShield();
+  }
+
+  activateShield() {
+    if (this.shieldTimeout) clearTimeout(this.shieldTimeout);
+    this.state.isImmune = true;
+
+    this.shieldTimeout = setTimeout(() => {
+      this.state.isImmune = false;
+    }, GAME_CONSTANTS.SHIELD.DURATION);
   }
 
   collectPowerUp(powerUp, index) {
@@ -887,13 +1038,19 @@ class PiggyJumpGame {
 
   spawnBullet() {
     if (!this.appleModel) return;
-  
+
+    // Tutorial
+    if (!localStorage.getItem("hasSeenBulletShieldTutorial")) {
+      localStorage.setItem("hasSeenBulletShieldTutorial", "true");
+      this.showInstructionOverlay("shield");
+    }
+
     const apple = this.appleModel.clone();
     apple.scale.set(0.01, 0.01, 0.01);
-  
+
     const side = Math.random() < 0.5 ? 0 : 1;
     const yPos = Math.random() * 15 - 5;
-  
+
     if (side === 0) {
       // Left side
       apple.position.set(-12, yPos, 0);
@@ -903,20 +1060,25 @@ class PiggyJumpGame {
       apple.position.set(12, yPos, 0);
       apple.direction = new THREE.Vector3(-1, 0, 0);
     }
-  
+
     this.scene.add(apple);
     this.bullets.push(apple);
   }
 
   handleBulletCollision(bullet, index) {
+    if (this.state.isImmune) {
+      this.scene.remove(bullet);
+      this.bullets.splice(index, 1);
+      return;
+    }
     const pushDirection = bullet.direction.x > 0 ? 1 : -1;
-    
+
     this.bulletPushForces.push({
       direction: pushDirection,
       magnitude: GAME_CONSTANTS.BULLET.PUSH_FORCE * 1.5,
       duration: GAME_CONSTANTS.BULLET.PUSH_DURATION,
     });
-  
+
     this.playSound("bulletHit");
     this.scene.remove(bullet);
     this.bullets.splice(index, 1);
@@ -1093,6 +1255,7 @@ class PiggyJumpGame {
     this.state.elapsedTime = 0;
     this.state.jumpForce = GAME_CONSTANTS.JUMP.NORMAL;
     this.state.backgroundIsWhite = false;
+    this.state.isImmune = false;
     this.scene.background = new THREE.Color(
       GAME_CONSTANTS.BACKGROUND.COLORS.NIGHT
     );
@@ -1101,7 +1264,7 @@ class PiggyJumpGame {
     this.timeDisplay.style.color = "white";
     this.bestTimeDisplay.style.color = "white";
     this.infoDiv.style.textShadow = "1px 1px 1px rgba(0, 0, 0, 0.7)";
-    
+
     // Clear
     this.bullets.forEach((bullet) => this.scene.remove(bullet));
     this.bullets = [];
@@ -1144,11 +1307,25 @@ class PiggyJumpGame {
       this.superJumpTimeout = null;
     }
 
+    // Reset Color
+    this.piggy.traverse((child) => {
+      if (child.isMesh) {
+        child.material.color.setHex(0xf4a1c8);
+      }
+    });
+
     this.animate();
   }
 
   showInstructionOverlay(type) {
     this.state.gamePaused = true;
+
+    if (this.state.startTime !== null) {
+      this.state.pausedElapsedTime = this.state.elapsedTime;
+      this.state.startTime = null;
+    }
+    let currentPage = 1;
+    let totalPages = 2;
 
     const overlay = document.createElement("div");
     overlay.className = "tutorial-overlay";
@@ -1171,95 +1348,207 @@ class PiggyJumpGame {
 
     let title, description;
 
-    if (type === "superJump") {
-      title = "Super Jump Power-Up!";
-      description = "Collect the yellow star to jump higher for 10 seconds!";
-    } else if (type === "movingPlatform") {
-      title = "Moving Platform!";
-      description =
-        "These platforms move side to side! Time your jumps carefully.";
-    }
+    if (type === "shield") {
+      const createPageContent = (pageNum) => {
+        overlay.innerHTML = "";
 
-    const keyInstruction = document.createElement("p");
-    keyInstruction.textContent = "Click Continue to resume";
-    keyInstruction.style.fontSize = "14px";
-    keyInstruction.style.color = "#cccccc";
-    keyInstruction.style.marginTop = "20px";
+        // Page 1: Bullet tutorial
+        if (pageNum === 1) {
+          title = "Dangerous Bullets!";
+          description =
+            "Apples will shoot from both sides! If hit, you'll be pushed in the opposite direction. Dodge them!";
+        }
+        // Page 2: Shield tutorial
+        else {
+          title = "Protective Shield!";
+          description =
+            "Collect blue shields to become temporarily immune! While shielded, bullets can't push you.";
+        }
 
-    const titleElement = document.createElement("h2");
-    titleElement.textContent = title;
-    titleElement.style.fontSize = "28px";
-    titleElement.style.marginBottom = "10px";
-    titleElement.style.color = "#ea3d8c";
-    overlay.appendChild(titleElement);
+        const keyInstruction = document.createElement("p");
+        keyInstruction.textContent = "Click Continue to resume";
+        keyInstruction.style.fontSize = "14px";
+        keyInstruction.style.color = "#cccccc";
+        keyInstruction.style.marginTop = "20px";
 
-    const mediaContainer = document.createElement("div");
-    mediaContainer.style.margin = "15px 0";
-    mediaContainer.style.width = "300px";
-    mediaContainer.style.height = "200px";
-    mediaContainer.style.display = "flex";
-    mediaContainer.style.alignItems = "center";
-    mediaContainer.style.justifyContent = "center";
+        const titleElement = document.createElement("h2");
+        titleElement.textContent = title;
+        titleElement.style.fontSize = "28px";
+        titleElement.style.marginBottom = "10px";
+        titleElement.style.color = "#ea3d8c";
 
-    if (type === "superJump") {
-      const placeholderText = document.createElement("div");
-      placeholderText.innerHTML = `<div style="font-size: 48px; color: #ffff00;">★</div>`;
-      mediaContainer.appendChild(placeholderText);
+        const descriptionElement = document.createElement("p");
+        descriptionElement.textContent = description;
+        descriptionElement.style.fontSize = "18px";
+        descriptionElement.style.margin = "15px 0";
+        descriptionElement.style.maxWidth = "500px";
+
+        const mediaContainer = document.createElement("div");
+        if (pageNum === 1) {
+          mediaContainer.innerHTML = `
+            <div style="display: flex; gap: 20px; align-items: center;">
+              <div style="font-size: 48px; color: #ff0000;">←</div>
+              <div style="font-size: 48px;">🍎</div>
+              <div style="font-size: 48px; color: #ff0000;">→</div>
+            </div>
+          `;
+        } else {
+          mediaContainer.innerHTML = `
+            <div style="display: flex; gap: 20px; align-items: center;">
+              <div style="font-size: 48px; color: #0099ff;">🛡</div>
+              <div style="font-size: 48px;">→</div>
+              <div style="font-size: 48px; color: #aad1e7;">🐷</div>
+            </div>
+          `;
+        }
+
+        // Page indicator
+        const pageIndicator = document.createElement("div");
+        pageIndicator.textContent = `${pageNum}/${totalPages}`;
+        pageIndicator.style.position = "absolute";
+        pageIndicator.style.top = "20px";
+        pageIndicator.style.right = "20px";
+        pageIndicator.style.fontSize = "20px";
+
+        const continueButton = document.createElement("button");
+        continueButton.textContent =
+          pageNum === totalPages ? "Start Game" : "Next";
+        continueButton.className = "tutorial-continue-button";
+        continueButton.textContent = "Continue";
+        continueButton.style.marginTop = "2px";
+        continueButton.style.padding = "12px 24px";
+        continueButton.style.fontSize = "1rem";
+        continueButton.style.cursor = "pointer";
+        continueButton.style.backgroundColor = "#ea3d8c";
+        continueButton.style.color = "#fff";
+        continueButton.style.border = "none";
+        continueButton.style.borderRadius = "8px";
+        continueButton.style.boxShadow = "0 5px 15px rgba(234, 61, 140, 0.3)";
+        continueButton.style.transition = "all 0.3s ease";
+
+        continueButton.addEventListener("mouseover", () => {
+          continueButton.style.backgroundColor = "#f07ab3";
+        });
+  
+        continueButton.addEventListener("mouseout", () => {
+          continueButton.style.backgroundColor = "#ea3d8c";
+        });
+
+
+        continueButton.addEventListener("click", () => {
+          if (pageNum < totalPages) {
+            currentPage++;
+            this.playSound("click");
+            createPageContent(currentPage);
+          } else {
+            this.playSound("click");
+            document.body.removeChild(overlay);
+            this.startCountdown();
+          }
+        });
+
+        overlay.appendChild(titleElement);
+        overlay.appendChild(mediaContainer);
+        overlay.appendChild(descriptionElement);
+        overlay.appendChild(pageIndicator);
+        if (pageNum === 2) {
+          overlay.appendChild(keyInstruction);
+        }
+        overlay.appendChild(continueButton);
+      };
+
+      createPageContent(1);
     } else {
-      const video = document.createElement("video");
-      video.src = "assets/videos/moving_platform.mp4";
-      video.autoplay = true;
-      video.loop = true;
-      video.muted = true;
-      video.controls = false;
-      video.style.maxWidth = "100%";
-      video.style.maxHeight = "100%";
-      video.addEventListener("click", function (e) {
-        e.preventDefault();
-        return false;
-      });
-      mediaContainer.appendChild(video);
-    }
+      if (type === "superJump") {
+        title = "Super Jump Power-Up!";
+        description = "Collect the yellow star to jump higher for 10 seconds!";
+      } else if (type === "movingPlatform") {
+        title = "Moving Platform!";
+        description =
+          "These platforms move side to side! Time your jumps carefully.";
+      }
 
-    overlay.appendChild(mediaContainer);
+      const keyInstruction = document.createElement("p");
+      keyInstruction.textContent = "Click Continue to resume";
+      keyInstruction.style.fontSize = "14px";
+      keyInstruction.style.color = "#cccccc";
+      keyInstruction.style.marginTop = "20px";
 
-    const descriptionElement = document.createElement("p");
-    descriptionElement.textContent = description;
-    descriptionElement.style.fontSize = "18px";
-    descriptionElement.style.margin = "15px 0";
-    descriptionElement.style.maxWidth = "500px";
-    overlay.appendChild(descriptionElement);
-    overlay.appendChild(keyInstruction);
+      const titleElement = document.createElement("h2");
+      titleElement.textContent = title;
+      titleElement.style.fontSize = "28px";
+      titleElement.style.marginBottom = "10px";
+      titleElement.style.color = "#ea3d8c";
+      overlay.appendChild(titleElement);
 
-    const continueButton = document.createElement("button");
-    continueButton.className = "tutorial-continue-button";
-    continueButton.textContent = "Continue";
-    continueButton.style.marginTop = "2px";
-    continueButton.style.padding = "12px 24px";
-    continueButton.style.fontSize = "1rem";
-    continueButton.style.cursor = "pointer";
-    continueButton.style.backgroundColor = "#ea3d8c";
-    continueButton.style.color = "#fff";
-    continueButton.style.border = "none";
-    continueButton.style.borderRadius = "8px";
-    continueButton.style.boxShadow = "0 5px 15px rgba(234, 61, 140, 0.3)";
-    continueButton.style.transition = "all 0.3s ease";
+      const mediaContainer = document.createElement("div");
+      mediaContainer.style.margin = "15px 0";
+      mediaContainer.style.width = "300px";
+      mediaContainer.style.height = "200px";
+      mediaContainer.style.display = "flex";
+      mediaContainer.style.alignItems = "center";
+      mediaContainer.style.justifyContent = "center";
 
-    continueButton.addEventListener("mouseover", () => {
-      continueButton.style.backgroundColor = "#f07ab3";
-    });
+      if (type === "superJump") {
+        const placeholderText = document.createElement("div");
+        placeholderText.innerHTML = `<div style="font-size: 48px; color: #ffff00;">★</div>`;
+        mediaContainer.appendChild(placeholderText);
+      } else {
+        const video = document.createElement("video");
+        video.src = "assets/videos/moving_platform.mp4";
+        video.autoplay = true;
+        video.loop = true;
+        video.muted = true;
+        video.controls = false;
+        video.style.maxWidth = "100%";
+        video.style.maxHeight = "100%";
+        video.addEventListener("click", function (e) {
+          e.preventDefault();
+          return false;
+        });
+        mediaContainer.appendChild(video);
+      }
 
-    continueButton.addEventListener("mouseout", () => {
+      overlay.appendChild(mediaContainer);
+
+      const descriptionElement = document.createElement("p");
+      descriptionElement.textContent = description;
+      descriptionElement.style.fontSize = "18px";
+      descriptionElement.style.margin = "15px 0";
+      descriptionElement.style.maxWidth = "500px";
+      overlay.appendChild(descriptionElement);
+      overlay.appendChild(keyInstruction);
+
+      const continueButton = document.createElement("button");
+      continueButton.className = "tutorial-continue-button";
+      continueButton.textContent = "Continue";
+      continueButton.style.marginTop = "2px";
+      continueButton.style.padding = "12px 24px";
+      continueButton.style.fontSize = "1rem";
+      continueButton.style.cursor = "pointer";
       continueButton.style.backgroundColor = "#ea3d8c";
-    });
+      continueButton.style.color = "#fff";
+      continueButton.style.border = "none";
+      continueButton.style.borderRadius = "8px";
+      continueButton.style.boxShadow = "0 5px 15px rgba(234, 61, 140, 0.3)";
+      continueButton.style.transition = "all 0.3s ease";
 
-    continueButton.addEventListener("click", () => {
-      this.playSound("click");
-      document.body.removeChild(overlay);
-      this.startCountdown();
-    });
+      continueButton.addEventListener("mouseover", () => {
+        continueButton.style.backgroundColor = "#f07ab3";
+      });
 
-    overlay.appendChild(continueButton);
+      continueButton.addEventListener("mouseout", () => {
+        continueButton.style.backgroundColor = "#ea3d8c";
+      });
+
+      continueButton.addEventListener("click", () => {
+        this.playSound("click");
+        document.body.removeChild(overlay);
+        this.startCountdown();
+      });
+
+      overlay.appendChild(continueButton);
+    }
     document.body.appendChild(overlay);
   }
 
@@ -1302,6 +1591,11 @@ class PiggyJumpGame {
         document.body.removeChild(countdownOverlay);
         this.state.countdownActive = false;
         this.state.gamePaused = false;
+
+        if (this.state.pausedElapsedTime > 0) {
+          this.state.startTime = Date.now() - this.state.pausedElapsedTime * 1000;
+          this.state.pausedElapsedTime = 0;
+        }
 
         if (
           this.audio.sounds.bgMusic &&
