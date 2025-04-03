@@ -282,7 +282,7 @@ class PiggyJumpGame {
     this.instructionsImg.id = "instructions";
     this.instructionsImg.alt = "Instructions";
     this.instructionsImg.width = 400;
-    this.instructionsImg.src = "../assets/images/instructions.png";
+    this.instructionsImg.src = "assets/images/instructions.png";
     this.infoDiv.appendChild(this.instructionsImg);
 
     document.body.appendChild(this.infoDiv);
@@ -591,7 +591,7 @@ class PiggyJumpGame {
     this.scene.background = new THREE.Color(
       GAME_CONSTANTS.BACKGROUND.COLORS.NIGHT
     );
-    this.instructionsImg.src = "../assets/images/instructions.png";
+    this.instructionsImg.src = "assets/images/instructions.png";
 
     // Clear non-initial platforms
     this.platforms.forEach((platform) => {
@@ -711,8 +711,8 @@ class PiggyJumpGame {
       this.timeDisplay.style.color = textColor;
       this.bestTimeDisplay.style.color = textColor;
       this.instructionsImg.src = isDay
-        ? "../assets/images/instructions2.png"
-        : "../assets/images/instructions.png";
+        ? "assets/images/instructions2.png"
+        : "assets/images/instructions.png";
     }
   }
 
@@ -1260,7 +1260,7 @@ class PiggyJumpGame {
       GAME_CONSTANTS.BACKGROUND.COLORS.NIGHT
     );
     this.state.lastBackgroundChangeTime = 0;
-    this.instructionsImg.src = "../assets/images/instructions.png";
+    this.instructionsImg.src = "assets/images/instructions.png";
     this.timeDisplay.style.color = "white";
     this.bestTimeDisplay.style.color = "white";
     this.infoDiv.style.textShadow = "1px 1px 1px rgba(0, 0, 0, 0.7)";
