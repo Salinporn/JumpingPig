@@ -527,7 +527,7 @@ class PiggyJumpGame {
 
         // Load apple model
         objLoader.load(
-          "assets/models/apple.obj",
+          "assets/models/Apple.obj",
           (object) => {
             this.appleModel = object;
             object.traverse((child) => {
