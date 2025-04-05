@@ -848,7 +848,7 @@ class PiggyJumpGame {
   handleBullets() {
     // Spawn new bullets
     if (
-      this.state.elapsedTime >= 10 &&
+      this.state.elapsedTime >= 30 &&
       Date.now() - this.state.lastBulletSpawnTime >
         GAME_CONSTANTS.BULLET.SPAWN_INTERVAL
     ) {
