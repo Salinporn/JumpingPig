@@ -18,8 +18,8 @@ class PiggyJumpGame {
     this.bestTimeDisplay = document.getElementById("best");
 
     this.initScene();
-    this.AudioManager = new AudioManager(this.camera);
-    this.tutorialManager = new TutorialManager(this.state, this.AudioManager, this);
+    this.audioManager = new AudioManager(this.camera);
+    this.tutorialManager = new TutorialManager(this.state, this.audioManager, this);
     this.initUI();
   }
 
@@ -38,7 +38,7 @@ class PiggyJumpGame {
       1000
     );
     this.camera.position.z = 20;
-    this.AudioManager = new AudioManager(this.camera);
+    this.audioManager = new AudioManager(this.camera);
 
     // Renderer
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -116,14 +116,14 @@ class PiggyJumpGame {
     soundSettingsDiv.appendChild(
       this.createVolumeControl(
         "BGM",
-        this.AudioManager.audio.bgmVolume,
+        this.audioManager.audio.bgmVolume,
         (volume) => {
-          if (!this.AudioManager.audio.isMuted) {
-            this.AudioManager.audio.bgmVolume = volume;
-            if (this.AudioManager.audio.sounds.bgMusic)
-              this.AudioManager.audio.sounds.bgMusic.setVolume(volume);
-            if (this.AudioManager.audio.sounds.bgGameOver)
-              this.AudioManager.audio.sounds.bgGameOver.setVolume(volume);
+          if (!this.audioManager.audio.isMuted) {
+            this.audioManager.audio.bgmVolume = volume;
+            if (this.audioManager.audio.sounds.bgMusic)
+              this.audioManager.audio.sounds.bgMusic.setVolume(volume);
+            if (this.audioManager.audio.sounds.bgGameOver)
+              this.audioManager.audio.sounds.bgGameOver.setVolume(volume);
           }
         }
       )
@@ -132,18 +132,18 @@ class PiggyJumpGame {
     soundSettingsDiv.appendChild(
       this.createVolumeControl(
         "SFX",
-        this.AudioManager.audio.sfxVolume,
+        this.audioManager.audio.sfxVolume,
         (volume) => {
-          if (!this.AudioManager.audio.isMuted) {
-            this.AudioManager.audio.sfxVolume = volume;
-            if (this.AudioManager.audio.sounds.jump)
-              this.AudioManager.audio.sounds.jump.setVolume(
+          if (!this.audioManager.audio.isMuted) {
+            this.audioManager.audio.sfxVolume = volume;
+            if (this.audioManager.audio.sounds.jump)
+              this.audioManager.audio.sounds.jump.setVolume(
                 volume + GAME_CONSTANTS.AUDIO.JUMP_VOLUME_OFFSET
               );
-            if (this.AudioManager.audio.sounds.star)
-              this.AudioManager.audio.sounds.star.setVolume(volume);
-            if (this.AudioManager.audio.sounds.click)
-              this.AudioManager.audio.sounds.click.setVolume(volume);
+            if (this.audioManager.audio.sounds.star)
+              this.audioManager.audio.sounds.star.setVolume(volume);
+            if (this.audioManager.audio.sounds.click)
+              this.audioManager.audio.sounds.click.setVolume(volume);
           }
         }
       )
@@ -210,7 +210,7 @@ class PiggyJumpGame {
     });
 
     this.muteButton.addEventListener("mouseout", () => {
-      this.muteButton.style.backgroundColor = this.AudioManager.audio.isMuted
+      this.muteButton.style.backgroundColor = this.audioManager.audio.isMuted
         ? "#555555"
         : "#ea3d8c";
     });
@@ -225,10 +225,10 @@ class PiggyJumpGame {
   }
 
   toggleMute() {
-    this.AudioManager.audio.isMuted = !this.AudioManager.audio.isMuted;
-    this.AudioManager.playSound("click");
+    this.audioManager.audio.isMuted = !this.audioManager.audio.isMuted;
+    this.audioManager.playSound("click");
 
-    if (this.AudioManager.audio.isMuted) {
+    if (this.audioManager.audio.isMuted) {
       this.muteButton.textContent = "Unmute";
       this.muteButton.style.backgroundColor = "#555555";
     } else {
@@ -237,19 +237,19 @@ class PiggyJumpGame {
     }
 
     // Update sounds
-    const volume = this.AudioManager.audio.isMuted ? 0 : 1;
-    Object.keys(this.AudioManager.audio.sounds).forEach((key) => {
-      const sound = this.AudioManager.audio.sounds[key];
+    const volume = this.audioManager.audio.isMuted ? 0 : 1;
+    Object.keys(this.audioManager.audio.sounds).forEach((key) => {
+      const sound = this.audioManager.audio.sounds[key];
       if (sound) {
         sound.setVolume(
-          this.AudioManager.audio.isMuted
+          this.audioManager.audio.isMuted
             ? 0
             : key === "bgMusic" || key === "bgGameOver"
-            ? this.AudioManager.audio.bgmVolume
+            ? this.audioManager.audio.bgmVolume
             : key === "jump"
-            ? this.AudioManager.audio.sfxVolume +
+            ? this.audioManager.audio.sfxVolume +
               GAME_CONSTANTS.AUDIO.JUMP_VOLUME_OFFSET
-            : this.AudioManager.audio.sfxVolume
+            : this.audioManager.audio.sfxVolume
         );
       }
     });
@@ -311,7 +311,7 @@ class PiggyJumpGame {
           this.piggy,
           this.state,
           this.keys,
-          this.AudioManager,
+          this.audioManager,
           this.velocity
         );
         // Load star model
@@ -390,7 +390,7 @@ class PiggyJumpGame {
                       this.scene,
                       this.appleModel,
                       this.tutorialManager,
-                      this.AudioManager
+                      this.audioManager
                     );
 
                     // Create Power up items
@@ -402,7 +402,7 @@ class PiggyJumpGame {
                       this.star,
                       this.shieldModel,
                       this.tutorialManager,
-                      this.AudioManager
+                      this.audioManager
                     );
 
                     // Create initial platforms
@@ -580,17 +580,17 @@ class PiggyJumpGame {
     this.state.gameOver = true;
 
     if (
-      this.AudioManager.audio.sounds.bgMusic &&
-      this.AudioManager.audio.sounds.bgMusic.isPlaying
+      this.audioManager.audio.sounds.bgMusic &&
+      this.audioManager.audio.sounds.bgMusic.isPlaying
     ) {
-      this.AudioManager.audio.sounds.bgMusic.stop();
+      this.audioManager.audio.sounds.bgMusic.stop();
     }
 
     if (
-      this.AudioManager.audio.sounds.bgGameOver &&
-      !this.AudioManager.audio.isMuted
+      this.audioManager.audio.sounds.bgGameOver &&
+      !this.audioManager.audio.isMuted
     ) {
-      this.AudioManager.audio.sounds.bgGameOver.play();
+      this.audioManager.audio.sounds.bgGameOver.play();
     }
 
     // Update highest score
@@ -686,14 +686,14 @@ class PiggyJumpGame {
     });
 
     restartButton.addEventListener("click", () => {
-      this.AudioManager.playSound("click");
+      this.audioManager.playSound("click");
       document.body.removeChild(overlay);
 
       if (
-        this.AudioManager.audio.sounds.bgGameOver &&
-        this.AudioManager.audio.sounds.bgGameOver.isPlaying
+        this.audioManager.audio.sounds.bgGameOver &&
+        this.audioManager.audio.sounds.bgGameOver.isPlaying
       ) {
-        this.AudioManager.audio.sounds.bgGameOver.stop();
+        this.audioManager.audio.sounds.bgGameOver.stop();
       }
 
       this.restartGame();
@@ -754,11 +754,11 @@ class PiggyJumpGame {
     });
 
     if (
-      this.AudioManager.audio.sounds.bgMusic &&
-      !this.AudioManager.audio.sounds.bgMusic.isPlaying &&
-      !this.AudioManager.audio.isMuted
+      this.audioManager.audio.sounds.bgMusic &&
+      !this.audioManager.audio.sounds.bgMusic.isPlaying &&
+      !this.audioManager.audio.isMuted
     ) {
-      this.AudioManager.audio.sounds.bgMusic.play();
+      this.audioManager.audio.sounds.bgMusic.play();
     }
 
     // Clear super jump timeout
