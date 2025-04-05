@@ -385,7 +385,7 @@ class PiggyJumpGame {
               }
             });
 
-            this.appleModel.scale.set(0.01, 0.01, 0.01);
+            this.appleModel.scale.set(0.015, 0.015, 0.015);
           },
           undefined,
           (err) => console.error("Error loading apple model:", err)
@@ -725,7 +725,7 @@ class PiggyJumpGame {
     if (
       !newPlatform.isMoving &&
       Math.random() < GAME_CONSTANTS.SHIELD.SPAWN_CHANCE &&
-      this.shieldModel && this.elapsedTime > 30
+      this.shieldModel
     ) {
       this.spawnShield(newPlatform);
     }
@@ -848,7 +848,7 @@ class PiggyJumpGame {
   handleBullets() {
     // Spawn new bullets
     if (
-      this.state.elapsedTime >= 30 &&
+      this.state.elapsedTime >= 10 &&
       Date.now() - this.state.lastBulletSpawnTime >
         GAME_CONSTANTS.BULLET.SPAWN_INTERVAL
     ) {
@@ -888,7 +888,6 @@ class PiggyJumpGame {
     }
 
     const apple = this.appleModel.clone();
-    apple.scale.set(0.01, 0.01, 0.01);
 
     const side = Math.random() < 0.5 ? 0 : 1;
     const yPos = Math.random() * 15 - 5;
