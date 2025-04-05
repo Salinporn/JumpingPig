@@ -1,13 +1,11 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.119/build/three.module.js";
-import { GAME_CONSTANTS } from "./constants.js";
+import { GAME_CONSTANTS } from "../constants.js";
 
 export class AudioManager {
-    constructor(camera) {
-        this.camera = camera;
-    }
-
-  initAudio() {
+  constructor(camera) {
+    this.camera = camera;
     this.audioListener = new THREE.AudioListener();
+    this.audio = null;
     this.camera.add(this.audioListener);
 
     this.audio = {
@@ -16,7 +14,7 @@ export class AudioManager {
       isMuted: false,
       sounds: {},
     };
-
+  
     this.loadAudioFiles();
   }
 
