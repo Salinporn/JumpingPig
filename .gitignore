@@ -8,7 +8,6 @@ yarn-debug.log*
 yarn-error.log*
 
 # Environment files
-.env
 .env.local
 
 # Build output (if you have a build process)

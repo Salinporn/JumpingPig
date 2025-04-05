@@ -1,0 +1,29 @@
+body {
+    margin: 0;
+    overflow: hidden;
+}
+
+#stats-container {
+    position: absolute;
+    top: 50px;
+    right: 50px;
+    color: white;
+    font-family: sans-serif;
+    pointer-events: none;
+    font-size: 24px;
+    text-shadow: 1px 1px 1px black;
+    text-align: right;
+    background-color: rgba(0, 0, 0, 0.3);
+    padding: 10px 20px;
+    border-radius: 10px;
+}
+
+#time, #score, #best {
+    margin: 5px 0;
+}
+
+#instructions img {
+    width: 100%;
+    height: auto;
+    margin: 0 auto;
+}
