@@ -307,7 +307,7 @@ class PiggyJumpGame {
           GAME_CONSTANTS.PIGGY.SCALE
         );
         this.scene.add(this.piggy);
-        this.PiggyManager = new PiggyManager(
+        this.piggyManager = new PiggyManager(
           this.piggy,
           this.state,
           this.keys,
@@ -484,10 +484,10 @@ class PiggyJumpGame {
     this.platformManager.handlePlatforms();
     this.powerUpManager.handlePowerUps();
     this.bulletManager.handleBullets();
-    this.PiggyManager.handlePiggyMovement();
+    this.piggyManager.handlePiggyMovement();
     this.checkGameOver();
     this.updateUI();
-    this.PiggyManager.updatePiggyColor();
+    this.piggyManager.updatePiggyColor();
 
     this.renderer.render(this.scene, this.camera);
   }
